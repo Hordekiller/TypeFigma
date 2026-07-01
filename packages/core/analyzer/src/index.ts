@@ -32,8 +32,12 @@ export class Analyzer {
     }));
 
     return {
+      projectMeta: {
+        figmaUrl,
+        fileName: file.name,
+        lastModified: file.lastModified,
+      },
       projectType: detection.projectType,
-      confidence: detection.confidence,
       pages,
       components: detection.components,
       designTokens,

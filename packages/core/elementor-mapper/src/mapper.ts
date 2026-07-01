@@ -1,4 +1,12 @@
-import type { DetectedComponents, ExtractedTokens, HeaderInfo, HeroInfo, SectionInfo, FooterInfo } from '@typefigma/analyzer';
+import type {
+  ComponentClassification,
+  HeaderComponent,
+  HeroComponent,
+  FooterComponent,
+  SectionComponent,
+  ProductCardComponent,
+  ExtractedTokens,
+} from '@typefigma/analyzer';
 import type { ElementorNode, ElementorTemplate, GlobalSettings } from './types.js';
 
 let idCounter = 0;
@@ -13,10 +21,10 @@ export class ElementorMapper {
     this.tokens = tokens;
   }
 
-  mapHeader(header: HeaderInfo): ElementorNode {
+  mapHeader(header: HeaderComponent): ElementorNode {
     const elements: ElementorNode[] = [];
 
-    const logoWidget: ElementorNode = {
+    const logo: ElementorNode = {
       id: generateId('logo'),
       elType: 'widget',
       widgetType: 'image',
@@ -38,45 +46,28 @@ export class ElementorMapper {
         pointer: 'underline',
         animation: 'fade',
         breakpoint: 'tablet',
-        dropdown: 'none',
       },
     };
 
-    const ctaWidget: ElementorNode = {
+    const ctaBtn: ElementorNode = {
       id: generateId('cta'),
       elType: 'widget',
       widgetType: 'button',
       settings: {
         text: 'Get Started',
         link: { url: '#' },
-        button_type: 'default',
         size: 'sm',
-        hover_animation: 'grow',
         button_background_color: this.tokens.colors.primary['500'],
         button_text_color: '#FFFFFF',
         border_radius: { size: 8, unit: 'px' },
       },
     };
 
-    const actionsContainer: ElementorNode = {
-      id: generateId('actions'),
-      elType: 'container',
-      settings: {
-        flex_direction: 'row',
-        justify_content: 'flex-end',
-        align_items: 'center',
-        gap: { size: 16, unit: 'px' },
-      },
-      elements: [ctaWidget],
-    };
+    if (header.hasLogo) elements.push(logo);
+    if (header.hasMenu) elements.push(navWidget);
+    if (header.hasCTA) elements.push(ctaBtn);
 
-    if (header.hasLogo || header.hasMenu) {
-      if (header.hasLogo) elements.push(logoWidget);
-      if (header.hasMenu) elements.push(navWidget);
-      if (header.hasCTA) elements.push(actionsContainer);
-    }
-
-    const headerContainer: ElementorNode = {
+    return {
       id: generateId('header'),
       elType: 'container',
       settings: {
@@ -85,75 +76,17 @@ export class ElementorMapper {
         justify_content: 'space-between',
         align_items: 'center',
         padding: { top: 20, right: 40, bottom: 20, left: 40, unit: 'px' },
-        background_background: header.type === 'transparent' ? 'classic' : 'classic',
+        background_background: 'classic',
         background_color: header.type === 'transparent' ? '' : '#FFFFFF',
-        border_border: header.type === 'transparent' ? 'none' : 'solid',
-        border_bottom: { size: 1, unit: 'px' },
-        border_color: '#E5E7EB',
         position: header.type === 'sticky' ? 'fixed' : header.type === 'transparent' ? 'absolute' : 'relative',
         top: 0,
         z_index: 100,
       },
       elements,
     };
-
-    return headerContainer;
   }
 
-  mapHero(hero: HeroInfo): ElementorNode {
-    const contentElements: ElementorNode[] = [
-      {
-        id: generateId('hero-title'),
-        elType: 'widget',
-        widgetType: 'heading',
-        settings: {
-          title: 'Your Main Headline',
-          header_size: 'h1',
-          align: hero.layout === 'centered' ? 'center' : 'left',
-          title_color: '#FFFFFF',
-          typography_typography: 'custom',
-          font_size: { size: 56, unit: 'px' },
-          font_weight: '700',
-        },
-      },
-      {
-        id: generateId('hero-desc'),
-        elType: 'widget',
-        widgetType: 'text-editor',
-        settings: {
-          editor: '<p>Your compelling subtext goes here</p>',
-          align: hero.layout === 'centered' ? 'center' : 'left',
-          text_color: '#D1D5DB',
-          typography_typography: 'custom',
-          font_size: { size: 18, unit: 'px' },
-        },
-      },
-      {
-        id: generateId('hero-buttons'),
-        elType: 'container',
-        settings: {
-          flex_direction: 'row',
-          justify_content: hero.layout === 'centered' ? 'center' : 'flex-start',
-          gap: { size: 16, unit: 'px' },
-        },
-        elements: [
-          {
-            id: generateId('btn-primary'),
-            elType: 'widget',
-            widgetType: 'button',
-            settings: {
-              text: 'Get Started',
-              link: { url: '#' },
-              button_background_color: this.tokens.colors.primary['500'],
-              button_text_color: '#FFFFFF',
-              border_radius: { size: 8, unit: 'px' },
-              padding: { top: 16, right: 32, bottom: 16, left: 32, unit: 'px' },
-            },
-          },
-        ],
-      },
-    ];
-
+  mapHero(hero: HeroComponent): ElementorNode {
     const elements: ElementorNode[] = [
       {
         id: generateId('hero-content'),
@@ -161,10 +94,35 @@ export class ElementorMapper {
         settings: {
           flex_direction: 'column',
           justify_content: 'center',
-          content_width: hero.layout === 'fullwidth' ? 'boxed' : 'boxed',
-          max_width: hero.layout === 'centered' ? '640px' : '720px',
+          content_width: 'boxed',
         },
-        elements: contentElements,
+        elements: [
+          {
+            id: generateId('hero-title'),
+            elType: 'widget',
+            widgetType: 'heading',
+            settings: {
+              title: 'Your Main Headline',
+              header_size: 'h1',
+              align: hero.layout === 'centered' ? 'center' : 'left',
+              title_color: '#FFFFFF',
+              typography_typography: 'custom',
+              font_size: { size: 56, unit: 'px' },
+              font_weight: '700',
+            },
+          },
+          {
+            id: generateId('hero-btn'),
+            elType: 'widget',
+            widgetType: 'button',
+            settings: {
+              text: 'Get Started',
+              button_background_color: this.tokens.colors.primary['500'],
+              button_text_color: '#FFFFFF',
+              border_radius: { size: 8, unit: 'px' },
+            },
+          },
+        ],
       },
     ];
 
@@ -172,20 +130,13 @@ export class ElementorMapper {
       elements.push({
         id: generateId('hero-media'),
         elType: 'container',
-        settings: {
-          flex_direction: 'column',
-          justify_content: 'center',
-        },
-        elements: [
-          {
-            id: generateId('hero-image'),
-            elType: 'widget',
-            widgetType: 'image',
-            settings: {
-              image: { url: '' },
-            },
-          },
-        ],
+        settings: { flex_direction: 'column', justify_content: 'center' },
+        elements: [{
+          id: generateId('hero-img'),
+          elType: 'widget',
+          widgetType: 'image',
+          settings: { image: { url: '' } },
+        }],
       });
     }
 
@@ -202,14 +153,12 @@ export class ElementorMapper {
         background_background: 'gradient',
         background_gradient_first_color: this.tokens.colors.primary['700'],
         background_gradient_second_color: this.tokens.colors.primary['900'],
-        background_gradient_type: 'linear',
-        background_gradient_angle: { size: 135, unit: 'deg' },
       },
       elements,
     };
   }
 
-  mapSection(section: SectionInfo): ElementorNode {
+  mapSection(section: SectionComponent): ElementorNode {
     return {
       id: generateId(`section-${section.type}`),
       elType: 'container',
@@ -221,29 +170,19 @@ export class ElementorMapper {
         {
           id: generateId(`${section.type}-inner`),
           elType: 'container',
-          settings: {
-            flex_direction: 'column',
-            align_items: 'center',
-          },
+          settings: { flex_direction: 'column', align_items: 'center' },
           elements: [
             {
               id: generateId(`${section.type}-title`),
               elType: 'widget',
               widgetType: 'heading',
-              settings: {
-                title: section.name,
-                header_size: 'h2',
-                align: 'center',
-              },
+              settings: { title: section.name, header_size: 'h2', align: 'center' },
             },
             {
               id: generateId(`${section.type}-desc`),
               elType: 'widget',
               widgetType: 'text-editor',
-              settings: {
-                editor: '<p>Add your content here</p>',
-                align: 'center',
-              },
+              settings: { editor: '<p>Add your content here</p>', align: 'center' },
             },
           ],
         },
@@ -251,24 +190,17 @@ export class ElementorMapper {
     };
   }
 
-  mapFooter(footer: FooterInfo): ElementorNode {
+  mapFooter(footer: FooterComponent): ElementorNode {
     const columns: ElementorNode[] = Array.from({ length: footer.columns }, (_, i) => ({
       id: generateId(`footer-col-${i + 1}`),
       elType: 'container',
-      settings: {
-        flex_direction: 'column',
-        gap: { size: 16, unit: 'px' },
-      },
+      settings: { flex_direction: 'column', gap: { size: 16, unit: 'px' } },
       elements: [
         {
           id: generateId(`footer-heading-${i + 1}`),
           elType: 'widget',
           widgetType: 'heading',
-          settings: {
-            title: `Column ${i + 1}`,
-            header_size: 'h4',
-            title_color: '#FFFFFF',
-          },
+          settings: { title: `Column ${i + 1}`, header_size: 'h4', title_color: '#FFFFFF' },
         },
         {
           id: generateId(`footer-menu-${i + 1}`),
@@ -279,17 +211,12 @@ export class ElementorMapper {
       ],
     }));
 
-    const elements: ElementorNode[] = [
-      {
-        id: generateId('footer-grid'),
-        elType: 'container',
-        settings: {
-          flex_direction: 'row',
-          gap: { size: 40, unit: 'px' },
-        },
-        elements: columns,
-      },
-    ];
+    const elements: ElementorNode[] = [{
+      id: generateId('footer-grid'),
+      elType: 'container',
+      settings: { flex_direction: 'row', gap: { size: 40, unit: 'px' } },
+      elements: columns,
+    }];
 
     if (footer.hasSocial) {
       elements.push({
@@ -319,39 +246,125 @@ export class ElementorMapper {
     };
   }
 
-  mapToTemplates(components: DetectedComponents): ElementorTemplate[] {
-    const templates: ElementorTemplate[] = [];
+  mapProductCard(card: ProductCardComponent): ElementorNode {
+    const imageElements: ElementorNode[] = [
+      {
+        id: generateId('pc-image'),
+        elType: 'widget',
+        widgetType: 'image',
+        settings: {
+          image: { url: '{{featured_image}}' },
+          hover_animation: 'zoom',
+          border_radius: { size: 8, unit: 'px', top: 8, right: 8, bottom: 0, left: 0 },
+        },
+      },
+    ];
 
-    if (components.header) {
-      templates.push({
-        title: 'Generated Header',
-        type: 'header',
-        content: [this.mapHeader(components.header)],
+    if (card.structure.productBadge) {
+      imageElements.push({
+        id: generateId('pc-badge'),
+        elType: 'widget',
+        widgetType: 'text-editor',
+        settings: {
+          editor: `<span style="background:#ef4444;color:white;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600">${card.structure.productBadge.text}</span>`,
+          position: 'absolute',
+          top: 8,
+          right: 8,
+        },
       });
     }
 
-    if (components.hero) {
-      templates.push({
-        title: 'Generated Hero Section',
-        type: 'section',
-        content: [this.mapHero(components.hero)],
-      });
+    const contentElements: ElementorNode[] = [
+      {
+        id: generateId('pc-title'),
+        elType: 'widget',
+        widgetType: 'heading',
+        settings: {
+          title: '{{post_title}}',
+          header_size: 'h3',
+          link: { url: '{{permalink}}' },
+        },
+      },
+      {
+        id: generateId('pc-price'),
+        elType: 'widget',
+        widgetType: 'text-editor',
+        settings: {
+          editor: '<span style="font-size:1.25rem;font-weight:700">{{price}}</span>',
+        },
+      },
+      {
+        id: generateId('pc-atc'),
+        elType: 'widget',
+        widgetType: 'button',
+        settings: {
+          text: 'Add to Cart',
+          button_background_color: this.tokens.colors.primary['500'],
+          button_text_color: '#FFFFFF',
+          border_radius: { size: 4, unit: 'px' },
+          align: 'center',
+        },
+      },
+    ];
+
+    return {
+      id: generateId(`pc-${card.id}`),
+      elType: 'container',
+      settings: {
+        content_width: 'boxed',
+        background_background: 'classic',
+        background_color: '#FFFFFF',
+        border_radius: { size: 8, unit: 'px' },
+        box_shadow_box_shadow_type: 'preset1',
+        box_shadow_box_shadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
+        hover_box_shadow_box_shadow_type: 'preset3',
+        hover_box_shadow_box_shadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+        margin: { bottom: 20, unit: 'px' },
+      },
+      elements: [
+        {
+          id: generateId('pc-image-wrap'),
+          elType: 'container',
+          settings: { flex_direction: 'column' },
+          elements: imageElements,
+        },
+        {
+          id: generateId('pc-content'),
+          elType: 'container',
+          settings: { flex_direction: 'column', padding: { top: 16, right: 16, bottom: 16, left: 16, unit: 'px' } },
+          elements: contentElements,
+        },
+      ],
+    };
+  }
+
+  mapToTemplates(components: ComponentClassification): ElementorTemplate[] {
+    const templates: ElementorTemplate[] = [];
+
+    if (components.headers.length > 0) {
+      templates.push({ title: 'Generated Header', type: 'header', content: [this.mapHeader(components.headers[0])] });
+    }
+
+    if (components.heroes.length > 0) {
+      templates.push({ title: 'Generated Hero', type: 'section', content: [this.mapHero(components.heroes[0])] });
     }
 
     for (const section of components.sections) {
+      if (section.confidence > 0.5) {
+        templates.push({ title: `Generated ${section.name}`, type: 'section', content: [this.mapSection(section)] });
+      }
+    }
+
+    if (components.productCards.length > 0) {
       templates.push({
-        title: `Generated ${section.name}`,
+        title: 'Generated Product Card',
         type: 'section',
-        content: [this.mapSection(section)],
+        content: [this.mapProductCard(components.productCards[0])],
       });
     }
 
-    if (components.footer) {
-      templates.push({
-        title: 'Generated Footer',
-        type: 'footer',
-        content: [this.mapFooter(components.footer)],
-      });
+    if (components.footers.length > 0) {
+      templates.push({ title: 'Generated Footer', type: 'footer', content: [this.mapFooter(components.footers[0])] });
     }
 
     return templates;
@@ -366,24 +379,21 @@ export class ElementorMapper {
         color: {
           primary: colors.primary['500'],
           secondary: colors.secondary['500'],
-          text: colors.neutral['900'],
-          accent: colors.primary['500'],
-          ...Object.fromEntries(
-            Object.entries(colors.neutral).map(([k, v]) => [`neutral_${k}`, v])
-          ),
+          text: colors.text.primary,
+          accent: colors.accent['500'] ?? colors.primary['500'],
         },
         typography: {
           h1: {
-            font_family: typography.h1.fontFamily,
-            font_size: { size: parseInt(typography.h1.fontSize), unit: 'px' },
-            font_weight: String(typography.h1.fontWeight),
-            line_height: { size: parseFloat(typography.h1.lineHeight), unit: 'em' },
+            font_family: typography.textStyles.h1.fontFamily,
+            font_size: { size: parseInt(typography.textStyles.h1.fontSize), unit: 'px' },
+            font_weight: String(typography.textStyles.h1.fontWeight),
+            line_height: { size: parseFloat(typography.textStyles.h1.lineHeight), unit: 'em' },
           },
           body: {
-            font_family: typography.body.fontFamily,
-            font_size: { size: parseInt(typography.body.fontSize), unit: 'px' },
-            font_weight: String(typography.body.fontWeight),
-            line_height: { size: parseFloat(typography.body.lineHeight), unit: 'em' },
+            font_family: typography.textStyles.body.fontFamily,
+            font_size: { size: parseInt(typography.textStyles.body.fontSize), unit: 'px' },
+            font_weight: String(typography.textStyles.body.fontWeight),
+            line_height: { size: parseFloat(typography.textStyles.body.lineHeight), unit: 'em' },
           },
         },
       },

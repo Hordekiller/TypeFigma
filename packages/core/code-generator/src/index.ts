@@ -1,6 +1,6 @@
 import { HtmlGenerator } from './html-generator.js';
 import { CssGenerator } from './css-generator.js';
-import type { DetectedComponents, ExtractedTokens } from '@typefigma/analyzer';
+import type { ComponentClassification, ExtractedTokens } from '@typefigma/analyzer';
 
 export interface GeneratedCode {
   html: string;
@@ -17,7 +17,7 @@ export class CodeGenerator {
     this.cssGen = new CssGenerator();
   }
 
-  generate(components: DetectedComponents, tokens: ExtractedTokens): GeneratedCode {
+  generate(components: ComponentClassification, tokens: ExtractedTokens): GeneratedCode {
     return {
       html: this.htmlGen.generatePage(components, tokens),
       globalCss: this.cssGen.generateGlobal(tokens),

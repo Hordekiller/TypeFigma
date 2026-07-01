@@ -1,14 +1,15 @@
 import type {
-  DetectedComponents,
-  HeaderInfo,
-  HeroInfo,
-  FooterInfo,
-  SectionInfo,
+  ComponentClassification,
+  HeaderComponent,
+  HeroComponent,
+  FooterComponent,
+  SectionComponent,
+  ProductCardComponent,
   ExtractedTokens,
 } from '@typefigma/analyzer';
 
 export class HtmlGenerator {
-  generateHeader(header: HeaderInfo, _tokens: ExtractedTokens): string {
+  generateHeader(header: HeaderComponent, _tokens: ExtractedTokens): string {
     return `<!-- Header -->
 <header class="site-header header--${header.type}">
   <div class="container">
@@ -34,7 +35,7 @@ export class HtmlGenerator {
 </header>`;
   }
 
-  generateHero(hero: HeroInfo, _tokens: ExtractedTokens): string {
+  generateHero(hero: HeroComponent, _tokens: ExtractedTokens): string {
     return `<!-- Hero Section -->
 <section class="hero hero--${hero.layout}">
   <div class="container">
@@ -52,7 +53,7 @@ export class HtmlGenerator {
 </section>`;
   }
 
-  generateSection(section: SectionInfo): string {
+  generateSection(section: SectionComponent): string {
     const sectionClass = section.type;
     return `<!-- ${section.name} Section -->
 <section class="section section--${sectionClass}">
@@ -68,7 +69,7 @@ export class HtmlGenerator {
 </section>`;
   }
 
-  generateFooter(footer: FooterInfo, _tokens: ExtractedTokens): string {
+  generateFooter(footer: FooterComponent, _tokens: ExtractedTokens): string {
     const columns = Array.from({ length: footer.columns }, (_, i) => i + 1);
 
     return `<!-- Footer -->
@@ -105,15 +106,63 @@ export class HtmlGenerator {
 </footer>`;
   }
 
-  generatePage(components: DetectedComponents, tokens: ExtractedTokens): string {
+  generateProductCard(card: ProductCardComponent, _tokens: ExtractedTokens): string {
+    return `<!-- Product Card -->
+<article class="product-card" data-product-id="{{product_id}}">
+  <div class="product-card__image-wrapper">
+    <img
+      src="{{featured_image}}"
+      alt="{{post_title}}"
+      class="product-card__image"
+      loading="lazy"
+    >
+    ${card.structure.productBadge ? `<span class="product-card__badge product-card__badge--sale">${card.structure.productBadge.text}</span>` : ''}
+    <div class="product-card__actions">
+      ${card.structure.wishlistButton ? `<button class="product-card__wishlist" aria-label="Add to wishlist">
+        <svg class="icon icon-heart"><!-- heart icon --></svg>
+      </button>` : ''}
+      ${card.structure.quickViewButton ? `<button class="product-card__quick-view" aria-label="Quick view">
+        <svg class="icon icon-eye"><!-- eye icon --></svg>
+      </button>` : ''}
+    </div>
+  </div>
+  <div class="product-card__content">
+    ${card.structure.productRating ? `<div class="product-card__rating">
+      <span class="stars">{{rating_stars}}</span>
+      <span class="product-card__rating-count">({{rating_count}})</span>
+    </div>` : ''}
+    <h3 class="product-card__title">
+      <a href="{{permalink}}">{{post_title}}</a>
+    </h3>
+    ${card.structure.shortDescription ? `<p class="product-card__excerpt">{{short_description}}</p>` : ''}
+    <div class="product-card__footer">
+      <div class="product-card__price">
+        <span class="product-card__price-regular">{{price}}</span>
+        ${card.structure.productPrice.format === 'sale' ? '<ins class="product-card__price-sale">{{sale_price}}</ins>' : ''}
+      </div>
+      <button class="product-card__add-to-cart">
+        <svg class="icon icon-cart"><!-- cart icon --></svg>
+        <span>{{add_to_cart_text}}</span>
+      </button>
+    </div>
+  </div>
+</article>`;
+  }
+
+  generatePage(components: ComponentClassification, tokens: ExtractedTokens): string {
     const parts: string[] = ['<div class="page-wrapper">'];
 
-    if (components.header) parts.push(this.generateHeader(components.header, tokens));
-    if (components.hero) parts.push(this.generateHero(components.hero, tokens));
+    if (components.headers.length > 0) parts.push(this.generateHeader(components.headers[0], tokens));
+    if (components.heroes.length > 0) parts.push(this.generateHero(components.heroes[0], tokens));
     for (const section of components.sections) {
-      parts.push(this.generateSection(section));
+      if (section.confidence > 0.5) {
+        parts.push(this.generateSection(section));
+      }
     }
-    if (components.footer) parts.push(this.generateFooter(components.footer, tokens));
+    for (const card of components.productCards) {
+      parts.push(this.generateProductCard(card, tokens));
+    }
+    if (components.footers.length > 0) parts.push(this.generateFooter(components.footers[0], tokens));
 
     parts.push('</div>');
     return parts.join('\n\n');

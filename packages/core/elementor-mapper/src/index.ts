@@ -1,6 +1,6 @@
 import { ElementorMapper } from './mapper.js';
 import type { ElementorTemplate, GlobalSettings } from './types.js';
-import type { DetectedComponents, ExtractedTokens } from '@typefigma/analyzer';
+import type { ComponentClassification, ExtractedTokens } from '@typefigma/analyzer';
 
 export class ElementorGenerator {
   private mapper: ElementorMapper;
@@ -9,7 +9,7 @@ export class ElementorGenerator {
     this.mapper = new ElementorMapper(tokens);
   }
 
-  generate(components: DetectedComponents): {
+  generate(components: ComponentClassification): {
     templates: ElementorTemplate[];
     globalSettings: GlobalSettings;
   } {
