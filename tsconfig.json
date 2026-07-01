@@ -1,0 +1,13 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/core/figma-client" },
+    { "path": "packages/core/analyzer" },
+    { "path": "packages/core/code-generator" },
+    { "path": "packages/core/elementor-mapper" },
+    { "path": "packages/core/theme-builder" },
+    { "path": "packages/core/validator" },
+    { "path": "packages/cli" },
+    { "path": "packages/api" }
+  ]
+}

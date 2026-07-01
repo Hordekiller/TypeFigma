@@ -1,0 +1,23 @@
+{
+  "name": "typefigma",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Figma to WordPress Theme - 10-Step Pipeline Converter",
+  "workspaces": [
+    "packages/core/*",
+    "packages/cli",
+    "packages/api",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "dev": "npm run dev --workspaces",
+    "lint": "npm run lint --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "clean": "npm run clean --workspaces",
+    "test": "npm run test --workspaces"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

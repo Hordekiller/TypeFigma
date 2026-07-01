@@ -1,0 +1,19 @@
+{
+  "name": "@typefigma/elementor-mapper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@typefigma/code-generator": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}
