@@ -14,7 +14,7 @@ app.get('/api/health', (_req, res) => {
 
 // Generate theme endpoint
 app.post('/api/generate', async (req, res) => {
-  const { figmaUrl, figmaToken, themeName } = req.body;
+  const { figmaUrl, figmaToken } = req.body;
 
   if (!figmaUrl || !figmaToken) {
     return res.status(400).json({

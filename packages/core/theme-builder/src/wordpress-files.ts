@@ -1,7 +1,5 @@
 import type {
   FigmaAnalysis,
-  DetectedComponents,
-  ExtractedTokens,
 } from '@typefigma/analyzer';
 import type { ElementorTemplate, GlobalSettings } from '@typefigma/elementor-mapper';
 

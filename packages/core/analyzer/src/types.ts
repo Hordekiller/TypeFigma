@@ -1,4 +1,4 @@
-import type { SceneNode, Color } from '@typefigma/figma-client';
+import type { SceneNode } from '@typefigma/figma-client';
 
 export type ProjectType = 'shop' | 'corporate' | 'blog' | 'portfolio' | 'landing';
 

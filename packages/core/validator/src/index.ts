@@ -52,7 +52,6 @@ export class Validator {
       // Check PHP syntax (basic check)
       if (file.path.endsWith('.php')) {
         const openTags = (file.content.match(/<?php/g) || []).length;
-        const closeTags = (file.content.match(/\?>/g) || []).length;
 
         if (openTags === 0) {
           warnings.push({

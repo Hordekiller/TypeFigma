@@ -288,7 +288,7 @@ h4 { font-size: var(--text-h4); }
 `;
   }
 
-  generateComponents(tokens: ExtractedTokens): string {
+  generateComponents(_tokens: ExtractedTokens): string {
     return `/* ============================================
    Component Styles — Generated from Figma
    ============================================ */

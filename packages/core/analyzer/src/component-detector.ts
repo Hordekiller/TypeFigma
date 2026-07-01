@@ -197,7 +197,6 @@ export class ComponentDetector {
 
   private detectProjectType(nodes: SceneNode[]): ProjectType {
     const names = nodes.map(n => n.name.toLowerCase()).join(' ');
-    const sections = this.detectSections(nodes);
 
     if (/product|shop|cart|buy|price|add.?to.?cart/i.test(names)) {
       return 'shop';

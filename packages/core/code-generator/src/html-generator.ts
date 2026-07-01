@@ -8,7 +8,7 @@ import type {
 } from '@typefigma/analyzer';
 
 export class HtmlGenerator {
-  generateHeader(header: HeaderInfo, tokens: ExtractedTokens): string {
+  generateHeader(header: HeaderInfo, _tokens: ExtractedTokens): string {
     return `<!-- Header -->
 <header class="site-header header--${header.type}">
   <div class="container">
@@ -34,7 +34,7 @@ export class HtmlGenerator {
 </header>`;
   }
 
-  generateHero(hero: HeroInfo, tokens: ExtractedTokens): string {
+  generateHero(hero: HeroInfo, _tokens: ExtractedTokens): string {
     return `<!-- Hero Section -->
 <section class="hero hero--${hero.layout}">
   <div class="container">
@@ -68,7 +68,7 @@ export class HtmlGenerator {
 </section>`;
   }
 
-  generateFooter(footer: FooterInfo, tokens: ExtractedTokens): string {
+  generateFooter(footer: FooterInfo, _tokens: ExtractedTokens): string {
     const columns = Array.from({ length: footer.columns }, (_, i) => i + 1);
 
     return `<!-- Footer -->

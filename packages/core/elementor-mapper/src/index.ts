@@ -1,5 +1,5 @@
 import { ElementorMapper } from './mapper.js';
-import type { ElementorTemplate, ElementorNode, GlobalSettings, ElementorDocument } from './types.js';
+import type { ElementorTemplate, GlobalSettings } from './types.js';
 import type { DetectedComponents, ExtractedTokens } from '@typefigma/analyzer';
 
 export class ElementorGenerator {

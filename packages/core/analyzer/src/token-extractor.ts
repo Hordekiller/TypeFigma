@@ -12,8 +12,8 @@ export class TokenExtractor {
     const colors = this.extractColors(file, styles);
     const typography = this.extractTypography(file, styles);
     const spacing = this.extractSpacing(file);
-    const shadows = this.extractShadows(file, styles);
-    const borderRadius = this.extractBorderRadius(file);
+    const shadows = this.extractShadows();
+    const borderRadius = this.extractBorderRadius();
 
     return { colors, typography, spacing, shadows, borderRadius };
   }
@@ -25,7 +25,7 @@ export class TokenExtractor {
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
   }
 
-  private extractColors(file: FigmaFile, styles?: FigmaStyles): ColorTokens {
+  private extractColors(_file: FigmaFile, styles?: FigmaStyles): ColorTokens {
     const primary: Record<string, string> = {};
     const secondary: Record<string, string> = {};
     const neutral: Record<string, string> = {};
@@ -81,7 +81,7 @@ export class TokenExtractor {
     return match?.[1] ?? null;
   }
 
-  private extractTypography(file: FigmaFile, styles?: FigmaStyles): TypographyTokens {
+  private extractTypography(_file: FigmaFile, styles?: FigmaStyles): TypographyTokens {
     const typography: TypographyTokens = {
       h1: { fontFamily: 'Inter', fontSize: '48px', fontWeight: 700, lineHeight: '1.2', letterSpacing: '-0.02em' },
       h2: { fontFamily: 'Inter', fontSize: '36px', fontWeight: 700, lineHeight: '1.25', letterSpacing: '-0.02em' },
@@ -146,7 +146,7 @@ export class TokenExtractor {
     };
   }
 
-  private extractShadows(file: FigmaFile, styles?: FigmaStyles): ShadowTokens {
+  private extractShadows(): ShadowTokens {
     return {
       sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
       md: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
@@ -154,7 +154,7 @@ export class TokenExtractor {
     };
   }
 
-  private extractBorderRadius(file: FigmaFile): BorderRadiusTokens {
+  private extractBorderRadius(): BorderRadiusTokens {
     return {
       none: '0',
       sm: '4px',
