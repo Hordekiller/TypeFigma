@@ -1915,9 +1915,465 @@ add_action('elementor/elements/categories_registered', function ($elements_manag
     files.push(
       { path: 'screenshot.png', content: this.buildScreenshotPng() },
       { path: 'inc/elementor-widgets.php', content: this.buildElementorWidgetsPhp() },
+      { path: 'demo-content.xml', content: this.buildDemoContentXml() },
     );
 
     return files;
+  }
+
+  buildDemoContentXml(): string {
+    const slug = this.options.themeSlug;
+    const siteName = this.options.themeName;
+    const isEcom = this.analysis.projectType.type === 'ecommerce';
+    const now = new Date().toISOString();
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<!-- WordPress eXtended RSS (WXR) for ${siteName} -->
+<rss version="2.0"
+  xmlns:excerpt="http://wordpress.org/export/1.2/excerpt/"
+  xmlns:content="http://purl.org/rss/1.0/modules/content/"
+  xmlns:dc="http://purl.org/dc/elements/1.1/"
+  xmlns:wp="http://wordpress.org/export/1.2/">
+<channel>
+  <title>${this.xmlEsc(siteName)}</title>
+  <link>https://example.com</link>
+  <description>${this.xmlEsc(siteName)} — built with TypeFigma</description>
+  <language>en-US</language>
+  <wp:wxr_version>1.2</wp:wxr_version>
+
+  <wp:author>
+    <wp:author_id>1</wp:author_id>
+    <wp:author_login>admin</wp:author_login>
+    <wp:author_email>admin@example.com</wp:author_email>
+    <wp:author_display_name>Admin</wp:author_display_name>
+  </wp:author>
+
+  <!-- Categories -->
+  <wp:category>
+    <wp:term_id>1</wp:term_id>
+    <wp:category_nicename>uncategorized</wp:category_nicename>
+    <wp:category_parent></wp:category_parent>
+    <wp:cat_name><![CDATA[Uncategorized]]></wp:cat_name>
+  </wp:category>
+
+  <wp:category>
+    <wp:term_id>2</wp:term_id>
+    <wp:category_nicename>news</wp:category_nicename>
+    <wp:category_parent></wp:category_parent>
+    <wp:cat_name><![CDATA[News]]></wp:cat_name>
+  </wp:category>
+  ${isEcom ? `
+  <wp:category>
+    <wp:term_id>3</wp:term_id>
+    <wp:category_nicename>products</wp:category_nicename>
+    <wp:category_parent></wp:category_parent>
+    <wp:cat_name><![CDATA[Products]]></wp:cat_name>
+  </wp:category>` : ''}
+
+  <!-- Tags -->
+  <wp:tag>
+    <wp:term_id>1</wp:term_id>
+    <wp:tag_slug>featured</wp:tag_slug>
+    <wp:tag_name><![CDATA[featured]]></wp:tag_name>
+  </wp:tag>
+  ${isEcom ? `
+  <!-- Product Categories (WooCommerce) -->
+  <wp:term>
+    <wp:term_id>10</wp:term_id>
+    <wp:term_taxonomy>product_cat</wp:term_taxonomy>
+    <wp:term_slug>clothing</wp:term_slug>
+    <wp:term_parent></wp:term_parent>
+    <wp:term_name><![CDATA[Clothing]]></wp:term_name>
+  </wp:term>
+  <wp:term>
+    <wp:term_id>11</wp:term_id>
+    <wp:term_taxonomy>product_cat</wp:term_taxonomy>
+    <wp:term_slug>accessories</wp:term_slug>
+    <wp:term_parent></wp:term_parent>
+    <wp:term_name><![CDATA[Accessories]]></wp:term_name>
+  </wp:term>
+  <wp:term>
+    <wp:term_id>12</wp:term_id>
+    <wp:term_taxonomy>product_cat</wp:term_taxonomy>
+    <wp:term_slug>home-garden</wp:term_slug>
+    <wp:term_parent></wp:term_parent>
+    <wp:term_name><![CDATA[Home & Garden]]></wp:term_name>
+  </wp:term>
+  <wp:term>
+    <wp:term_id>13</wp:term_id>
+    <wp:term_taxonomy>product_tag</wp:term_taxonomy>
+    <wp:term_slug>new</wp:term_slug>
+    <wp:term_parent></wp:term_parent>
+    <wp:term_name><![CDATA[new]]></wp:term_name>
+  </wp:term>` : ''}
+
+  <!-- Navigation Menu -->
+  <wp:term>
+    <wp:term_id>20</wp:term_id>
+    <wp:term_taxonomy>nav_menu</wp:term_taxonomy>
+    <wp:term_slug>primary</wp:term_slug>
+    <wp:term_name><![CDATA[Primary Menu]]></wp:term_name>
+  </wp:term>
+
+  <!-- === Pages === -->
+
+  <item>
+    <title>Home</title>
+    <dc:creator><![CDATA[admin]]></dc:creator>
+    <content:encoded><![CDATA[<!-- wp:paragraph -->
+<p>Welcome to ${this.xmlEsc(siteName)}. This is your home page.</p>
+<!-- /wp:paragraph -->]]></content:encoded>
+    <wp:post_id>1</wp:post_id>
+    <wp:post_date>${now}</wp:post_date>
+    <wp:post_type>page</wp:post_type>
+    <wp:status>publish</wp:status>
+    <wp:menu_order>0</wp:menu_order>
+    <wp:comment_status>closed</wp:comment_status>
+    <wp:post_name>home</wp:post_name>
+  </item>
+
+  <item>
+    <title>About</title>
+    <dc:creator><![CDATA[admin]]></dc:creator>
+    <content:encoded><![CDATA[<!-- wp:paragraph -->
+<p>About ${this.xmlEsc(siteName)}. We build amazing digital experiences.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2>Our Mission</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>To deliver high-quality WordPress solutions powered by design.</p>
+<!-- /wp:paragraph -->]]></content:encoded>
+    <wp:post_id>2</wp:post_id>
+    <wp:post_date>${now}</wp:post_date>
+    <wp:post_type>page</wp:post_type>
+    <wp:status>publish</wp:status>
+    <wp:menu_order>1</wp:menu_order>
+    <wp:comment_status>closed</wp:comment_status>
+    <wp:post_name>about</wp:post_name>
+  </item>
+
+  <item>
+    <title>Contact</title>
+    <dc:creator><![CDATA[admin]]></dc:creator>
+    <content:encoded><![CDATA[<!-- wp:paragraph -->
+<p>Get in touch with us. Use the form below or email us at hello@example.com.</p>
+<!-- /wp:paragraph -->]]></content:encoded>
+    <wp:post_id>3</wp:post_id>
+    <wp:post_date>${now}</wp:post_date>
+    <wp:post_type>page</wp:post_type>
+    <wp:status>publish</wp:status>
+    <wp:menu_order>2</wp:menu_order>
+    <wp:comment_status>closed</wp:comment_status>
+    <wp:post_name>contact</wp:post_name>
+  </item>
+  ${isEcom ? `
+  <!-- === WooCommerce Pages === -->
+  <item>
+    <title>Shop</title>
+    <dc:creator><![CDATA[admin]]></dc:creator>
+    <content:encoded><![CDATA[<!-- wp:paragraph -->
+<p>Browse our products.</p>
+<!-- /wp:paragraph -->]]></content:encoded>
+    <wp:post_id>4</wp:post_id>
+    <wp:post_date>${now}</wp:post_date>
+    <wp:post_type>page</wp:post_type>
+    <wp:status>publish</wp:status>
+    <wp:menu_order>3</wp:menu_order>
+    <wp:comment_status>closed</wp:comment_status>
+    <wp:post_name>shop</wp:post_name>
+  </item>
+
+  <!-- Sample Products -->
+  <item>
+    <title>Classic T-Shirt</title>
+    <dc:creator><![CDATA[admin]]></dc:creator>
+    <content:encoded><![CDATA[Premium quality cotton t-shirt. Comfortable and durable for everyday wear.]]></content:encoded>
+    <wp:post_id>10</wp:post_id>
+    <wp:post_date>${now}</wp:post_date>
+    <wp:post_type>product</wp:post_type>
+    <wp:status>publish</wp:status>
+    <wp:post_name>classic-t-shirt</wp:post_name>
+    <category domain="product_cat" nicename="clothing"><![CDATA[Clothing]]></category>
+    <category domain="product_tag" nicename="new"><![CDATA[new]]></category>
+    <wp:postmeta>
+      <wp:meta_key>_regular_price</wp:meta_key>
+      <wp:meta_value><![CDATA[29.99]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_price</wp:meta_key>
+      <wp:meta_value><![CDATA[29.99]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_sku</wp:meta_key>
+      <wp:meta_value><![CDATA[TSH-001]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_stock_status</wp:meta_key>
+      <wp:meta_value><![CDATA[instock]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_weight</wp:meta_key>
+      <wp:meta_value><![CDATA[0.3]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_product_image_gallery</wp:meta_key>
+      <wp:meta_value><![CDATA[]]></wp:meta_value>
+    </wp:postmeta>
+  </item>
+
+  <item>
+    <title>Leather Wallet</title>
+    <dc:creator><![CDATA[admin]]></dc:creator>
+    <content:encoded><![CDATA[Handcrafted genuine leather wallet with multiple card slots and RFID protection.]]></content:encoded>
+    <wp:post_id>11</wp:post_id>
+    <wp:post_date>${now}</wp:post_date>
+    <wp:post_type>product</wp:post_type>
+    <wp:status>publish</wp:status>
+    <wp:post_name>leather-wallet</wp:post_name>
+    <category domain="product_cat" nicename="accessories"><![CDATA[Accessories]]></category>
+    <wp:postmeta>
+      <wp:meta_key>_regular_price</wp:meta_key>
+      <wp:meta_value><![CDATA[49.99]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_sale_price</wp:meta_key>
+      <wp:meta_value><![CDATA[39.99]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_price</wp:meta_key>
+      <wp:meta_value><![CDATA[39.99]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_sku</wp:meta_key>
+      <wp:meta_value><![CDATA[WAL-002]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_stock_status</wp:meta_key>
+      <wp:meta_value><![CDATA[instock]]></wp:meta_value>
+    </wp:postmeta>
+  </item>
+
+  <item>
+    <title>Potted Plant</title>
+    <dc:creator><![CDATA[admin]]></dc:creator>
+    <content:encoded><![CDATA[Beautiful indoor ceramic potted plant. Perfect for home or office decoration.]]></content:encoded>
+    <wp:post_id>12</wp:post_id>
+    <wp:post_date>${now}</wp:post_date>
+    <wp:post_type>product</wp:post_type>
+    <wp:status>publish</wp:status>
+    <wp:post_name>potted-plant</wp:post_name>
+    <category domain="product_cat" nicename="home-garden"><![CDATA[Home & Garden]]></category>
+    <wp:postmeta>
+      <wp:meta_key>_regular_price</wp:meta_key>
+      <wp:meta_value><![CDATA[34.99]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_price</wp:meta_key>
+      <wp:meta_value><![CDATA[34.99]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_sku</wp:meta_key>
+      <wp:meta_value><![CDATA[PLT-003]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_stock_status</wp:meta_key>
+      <wp:meta_value><![CDATA[instock]]></wp:meta_value>
+    </wp:postmeta>
+  </item>
+  ` : ''}
+
+  <!-- Blog Post -->
+  <item>
+    <title>Hello World</title>
+    <dc:creator><![CDATA[admin]]></dc:creator>
+    <content:encoded><![CDATA[<!-- wp:paragraph -->
+<p>Welcome to ${this.xmlEsc(siteName)}. This is your first post. Edit or delete it to start your blog.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2>Getting Started</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Customize your theme in the <a href="/wp-admin/customize.php">Customizer</a> or use Elementor to build pages visually.</p>
+<!-- /wp:paragraph -->]]></content:encoded>
+    <wp:post_id>20</wp:post_id>
+    <wp:post_date>${now}</wp:post_date>
+    <wp:post_type>post</wp:post_type>
+    <wp:status>publish</wp:status>
+    <wp:comment_status>open</wp:comment_status>
+    <wp:post_name>hello-world</wp:post_name>
+    <category domain="category" nicename="uncategorized"><![CDATA[Uncategorized]]></category>
+  </item>
+
+  <!-- Menu Items -->
+  <item>
+    <title>Home</title>
+    <dc:creator><![CDATA[admin]]></dc:creator>
+    <wp:post_id>30</wp:post_id>
+    <wp:post_date>${now}</wp:post_date>
+    <wp:post_type>nav_menu_item</wp:post_type>
+    <wp:status>publish</wp:status>
+    <wp:post_name></wp:post_name>
+    <wp:postmeta>
+      <wp:meta_key>_menu_item_type</wp:meta_key>
+      <wp:meta_value><![CDATA[post_type]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_menu_item_menu_item_parent</wp:meta_key>
+      <wp:meta_value><![CDATA[0]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_menu_item_object_id</wp:meta_key>
+      <wp:meta_value><![CDATA[1]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_menu_item_object</wp:meta_key>
+      <wp:meta_value><![CDATA[page]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_menu_item_orphaned</wp:meta_key>
+      <wp:meta_value><![CDATA[${now}]]></wp:meta_value>
+    </wp:postmeta>
+    <category domain="nav_menu" nicename="primary"><![CDATA[Primary Menu]]></category>
+  </item>
+
+  <item>
+    <title>About</title>
+    <dc:creator><![CDATA[admin]]></dc:creator>
+    <wp:post_id>31</wp:post_id>
+    <wp:post_date>${now}</wp:post_date>
+    <wp:post_type>nav_menu_item</wp:post_type>
+    <wp:status>publish</wp:status>
+    <wp:post_name></wp:post_name>
+    <wp:postmeta>
+      <wp:meta_key>_menu_item_type</wp:meta_key>
+      <wp:meta_value><![CDATA[post_type]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_menu_item_menu_item_parent</wp:meta_key>
+      <wp:meta_value><![CDATA[0]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_menu_item_object_id</wp:meta_key>
+      <wp:meta_value><![CDATA[2]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_menu_item_object</wp:meta_key>
+      <wp:meta_value><![CDATA[page]]></wp:meta_value>
+    </wp:postmeta>
+    <category domain="nav_menu" nicename="primary"><![CDATA[Primary Menu]]></category>
+  </item>
+
+  <item>
+    <title>Contact</title>
+    <dc:creator><![CDATA[admin]]></dc:creator>
+    <wp:post_id>32</wp:post_id>
+    <wp:post_date>${now}</wp:post_date>
+    <wp:post_type>nav_menu_item</wp:post_type>
+    <wp:status>publish</wp:status>
+    <wp:post_name></wp:post_name>
+    <wp:postmeta>
+      <wp:meta_key>_menu_item_type</wp:meta_key>
+      <wp:meta_value><![CDATA[post_type]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_menu_item_menu_item_parent</wp:meta_key>
+      <wp:meta_value><![CDATA[0]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_menu_item_object_id</wp:meta_key>
+      <wp:meta_value><![CDATA[3]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_menu_item_object</wp:meta_key>
+      <wp:meta_value><![CDATA[page]]></wp:meta_value>
+    </wp:postmeta>
+    <category domain="nav_menu" nicename="primary"><![CDATA[Primary Menu]]></category>
+  </item>
+  ${isEcom ? `
+  <item>
+    <title>Shop</title>
+    <dc:creator><![CDATA[admin]]></dc:creator>
+    <wp:post_id>33</wp:post_id>
+    <wp:post_date>${now}</wp:post_date>
+    <wp:post_type>nav_menu_item</wp:post_type>
+    <wp:status>publish</wp:status>
+    <wp:post_name></wp:post_name>
+    <wp:postmeta>
+      <wp:meta_key>_menu_item_type</wp:meta_key>
+      <wp:meta_value><![CDATA[post_type]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_menu_item_menu_item_parent</wp:meta_key>
+      <wp:meta_value><![CDATA[0]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_menu_item_object_id</wp:meta_key>
+      <wp:meta_value><![CDATA[4]]></wp:meta_value>
+    </wp:postmeta>
+    <wp:postmeta>
+      <wp:meta_key>_menu_item_object</wp:meta_key>
+      <wp:meta_value><![CDATA[page]]></wp:meta_value>
+    </wp:postmeta>
+    <category domain="nav_menu" nicename="primary"><![CDATA[Primary Menu]]></category>
+  </item>
+  <!-- Set up WooCommerce pages -->
+  <item>
+    <title>Cart</title>
+    <dc:creator><![CDATA[admin]]></dc:creator>
+    <content:encoded><![CDATA[<!-- wp:paragraph --><p>Your cart is empty.</p><!-- /wp:paragraph -->]]></content:encoded>
+    <wp:post_id>40</wp:post_id>
+    <wp:post_date>${now}</wp:post_date>
+    <wp:post_type>page</wp:post_type>
+    <wp:status>publish</wp:status>
+    <wp:comment_status>closed</wp:comment_status>
+    <wp:post_name>cart</wp:post_name>
+    <wp:postmeta>
+      <wp:meta_key>_wp_page_template</wp:meta_key>
+      <wp:meta_value><![CDATA[woocommerce/cart.php]]></wp:meta_value>
+    </wp:postmeta>
+  </item>
+  <item>
+    <title>Checkout</title>
+    <dc:creator><![CDATA[admin]]></dc:creator>
+    <content:encoded><![CDATA[<!-- wp:paragraph --><p>Place your order.</p><!-- /wp:paragraph -->]]></content:encoded>
+    <wp:post_id>41</wp:post_id>
+    <wp:post_date>${now}</wp:post_date>
+    <wp:post_type>page</wp:post_type>
+    <wp:status>publish</wp:status>
+    <wp:comment_status>closed</wp:comment_status>
+    <wp:post_name>checkout</wp:post_name>
+    <wp:postmeta>
+      <wp:meta_key>_wp_page_template</wp:meta_key>
+      <wp:meta_value><![CDATA[woocommerce/checkout.php]]></wp:meta_value>
+    </wp:postmeta>
+  </item>
+  <item>
+    <title>My Account</title>
+    <dc:creator><![CDATA[admin]]></dc:creator>
+    <content:encoded><![CDATA[<!-- wp:paragraph --><p>Manage your account.</p><!-- /wp:paragraph -->]]></content:encoded>
+    <wp:post_id>42</wp:post_id>
+    <wp:post_date>${now}</wp:post_date>
+    <wp:post_type>page</wp:post_type>
+    <wp:status>publish</wp:status>
+    <wp:comment_status>closed</wp:comment_status>
+    <wp:post_name>my-account</wp:post_name>
+    <wp:postmeta>
+      <wp:meta_key>_wp_page_template</wp:meta_key>
+      <wp:meta_value><![CDATA[woocommerce/myaccount.php]]></wp:meta_value>
+    </wp:postmeta>
+  </item>
+  ` : ''}
+</channel>
+</rss>`;
+  }
+
+  private xmlEsc(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   private getConstant(suffix: string): string {

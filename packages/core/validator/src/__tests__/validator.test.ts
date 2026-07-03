@@ -46,7 +46,6 @@ describe('Validator', () => {
       { path: 'style.css', content: '/* Theme Name: Test */' },
     ];
     const report = validator.validate(files);
-    // Should have at least found the escaping functions we added
     expect(report.wordpress.escapingFunctions).toBeGreaterThanOrEqual(2);
   });
 
@@ -74,5 +73,35 @@ describe('Validator', () => {
     ];
     const report = validator.validate(files);
     expect(report.errors.some(e => e.message.toLowerCase().includes('brace') || e.message.toLowerCase().includes('syntax'))).toBe(true);
+  });
+
+  it('should handle empty file list', () => {
+    const report = validator.validate([]);
+    expect(report.errors.length).toBeGreaterThan(0);
+    expect(report.summary.passed).toBe(false);
+  });
+
+  it('should handle files with empty string content', () => {
+    const files: ThemeFile[] = [
+      { path: 'style.css', content: '' },
+      { path: 'index.php', content: '' },
+      { path: 'header.php', content: '' },
+      { path: 'footer.php', content: '' },
+      { path: 'functions.php', content: '' },
+    ];
+    const report = validator.validate(files);
+    expect(report.summary.passed).toBe(false);
+    expect(report.performance.totalSize).toBeGreaterThanOrEqual(0);
+  });
+
+  it('should detect missing style.css header', () => {
+    const files: ThemeFile[] = [
+      ...createValidTheme().filter(f => f.path !== 'style.css'),
+      { path: 'style.css', content: 'body { color: red; }' },
+    ];
+    const report = validator.validate(files);
+    const hasThemeName = report.errors.some(e => e.message.toLowerCase().includes('theme name'));
+    const hasMissing = report.structure.missingRequired.length > 0;
+    expect(hasThemeName || !report.summary.passed).toBe(true);
   });
 });

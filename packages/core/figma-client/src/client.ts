@@ -1,15 +1,21 @@
 import type { FigmaFile, FigmaStyles, FigmaVariablesResponse } from './types.js';
 
 const FIGMA_API_BASE = 'https://api.figma.com/v1';
+const DEFAULT_MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY_MS = 1000;
 
 export class FigmaClient {
   private accessToken: string;
+  private maxRetries: number;
+  private baseRetryDelayMs: number;
 
-  constructor(accessToken: string) {
+  constructor(accessToken: string, maxRetries: number = DEFAULT_MAX_RETRIES, baseRetryDelayMs: number = INITIAL_RETRY_DELAY_MS) {
     this.accessToken = accessToken;
+    this.maxRetries = maxRetries;
+    this.baseRetryDelayMs = baseRetryDelayMs;
   }
 
-  private async request<T>(path: string): Promise<T> {
+  private async request<T>(path: string, attempt: number = 1): Promise<T> {
     const url = `${FIGMA_API_BASE}${path}`;
     const response = await fetch(url, {
       headers: {
@@ -17,11 +23,26 @@ export class FigmaClient {
       },
     });
 
-    if (!response.ok) {
-      throw new Error(`Figma API error: ${response.status} ${response.statusText}`);
+    if (response.ok) {
+      return response.json() as Promise<T>;
     }
 
-    return response.json() as Promise<T>;
+    if (
+      attempt < this.maxRetries &&
+      (response.status === 429 || response.status >= 500)
+    ) {
+      const retryAfter = response.headers.get('Retry-After');
+      const baseDelay = retryAfter
+        ? parseInt(retryAfter, 10) * 1000
+        : this.baseRetryDelayMs * Math.pow(2, attempt - 1);
+      const jitter = Math.random() * 500;
+      const delay = baseDelay + jitter;
+
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return this.request<T>(path, attempt + 1);
+    }
+
+    throw new Error(`Figma API error: ${response.status} ${response.statusText}`);
   }
 
   async getFile(fileKey: string): Promise<FigmaFile> {

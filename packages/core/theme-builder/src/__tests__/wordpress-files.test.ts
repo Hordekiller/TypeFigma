@@ -154,4 +154,32 @@ describe('WordPressFileBuilder', () => {
     expect(files.some(f => f.path === 'screenshot.png')).toBe(true);
     expect(files.some(f => f.path.startsWith('woocommerce/'))).toBe(true);
   });
+
+  it('should build demo-content.xml with WXR structure', () => {
+    const xml = builder.buildDemoContentXml();
+    expect(xml).toContain('<?xml version="1.0"');
+    expect(xml).toContain('<rss version="2.0"');
+    expect(xml).toContain('wp:wxr_version');
+    expect(xml).toContain('<wp:author>');
+    expect(xml).toContain('WooCommerce');
+    expect(xml).toContain('_regular_price');
+    expect(xml).toContain('product_cat');
+    expect(xml).toContain('nav_menu');
+    expect(xml).toContain('Test Theme');
+  });
+
+  it('should handle non-ecommerce demo-content.xml', () => {
+    const nonEcomAnalysis: FigmaAnalysis = {
+      ...mockAnalysis,
+      projectType: { ...mockAnalysis.projectType, type: 'blog' },
+    };
+    const blogBuilder = new WordPressFileBuilder(
+      { themeName: 'Blog Theme', themeSlug: 'blog-theme', projectType: 'blog' },
+      nonEcomAnalysis,
+    );
+    const xml = blogBuilder.buildDemoContentXml();
+    expect(xml).toContain('<?xml version="1.0"');
+    expect(xml).not.toContain('_regular_price');
+    expect(xml).not.toContain('product_cat');
+  });
 });

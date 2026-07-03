@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FigmaClient } from '../client.js';
 
 describe('FigmaClient', () => {
@@ -6,6 +6,9 @@ describe('FigmaClient', () => {
 
   beforeEach(() => {
     client = new FigmaClient('test-token');
+  });
+
+  afterEach(() => {
     vi.restoreAllMocks();
   });
 
@@ -80,10 +83,78 @@ describe('FigmaClient', () => {
     });
 
     it('should throw on non-ok response', async () => {
-      const mockResponse = { ok: false, status: 403, statusText: 'Forbidden' };
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as Response);
+      const mockResponse = { ok: false, status: 403, statusText: 'Forbidden', headers: { get: () => null } };
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as unknown as Response);
 
       await expect(client.getFile('test-key')).rejects.toThrow('Figma API error: 403 Forbidden');
     });
+
+    it('should throw on 403 without retrying', async () => {
+      const mockFetch = vi.spyOn(globalThis, 'fetch');
+      mockFetch.mockResolvedValue({ ok: false, status: 403, statusText: 'Forbidden', headers: { get: () => null } } as unknown as Response);
+
+      await expect(client.getFile('test-key')).rejects.toThrow('Figma API error: 403 Forbidden');
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should retry on 429 and succeed', async () => {
+      const fastClient = new FigmaClient('test-token', 3, 10);
+      const mockFetch = vi.spyOn(globalThis, 'fetch');
+      mockFetch
+        .mockResolvedValueOnce({ ok: false, status: 429, statusText: 'Too Many Requests', headers: { get: () => null } } as unknown as Response)
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ name: 'retried' }) } as unknown as Response);
+
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+      const result = await fastClient.getFile('test-key');
+
+      expect(result).toEqual({ name: 'retried' });
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    }, 10000);
+
+    it('should retry on 500 and succeed', async () => {
+      const fastClient = new FigmaClient('test-token', 3, 10);
+      const mockFetch = vi.spyOn(globalThis, 'fetch');
+      mockFetch
+        .mockResolvedValueOnce({ ok: false, status: 500, statusText: 'Server Error', headers: { get: () => null } } as unknown as Response)
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ name: 'recovered' }) } as unknown as Response);
+
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+      const result = await fastClient.getFile('test-key');
+
+      expect(result).toEqual({ name: 'recovered' });
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    }, 10000);
+
+    it('should respect Retry-After header', async () => {
+      const fastClient = new FigmaClient('test-token', 3, 10);
+      const mockFetch = vi.spyOn(globalThis, 'fetch');
+      const headersWithRetry = { get: (key: string) => key === 'Retry-After' ? '1' : null };
+      mockFetch
+        .mockResolvedValueOnce({ ok: false, status: 429, statusText: 'Too Many Requests', headers: headersWithRetry } as unknown as Response)
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) } as unknown as Response);
+
+      await expect(fastClient.getFile('test-key')).resolves.toBeDefined();
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    }, 10000);
+
+    it('should exhaust retries on persistent 429', async () => {
+      const fastClient = new FigmaClient('test-token', 3, 10);
+      const mockFetch = vi.spyOn(globalThis, 'fetch');
+      mockFetch.mockResolvedValue({ ok: false, status: 429, statusText: 'Too Many Requests', headers: { get: () => null } } as unknown as Response);
+
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+      await expect(fastClient.getFile('test-key')).rejects.toThrow('Figma API error: 429 Too Many Requests');
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+    }, 10000);
+
+    it('should use custom maxRetries=2', async () => {
+      const fastClient = new FigmaClient('test-token', 2, 10);
+      const mockFetch = vi.spyOn(globalThis, 'fetch');
+      mockFetch.mockResolvedValue({ ok: false, status: 429, statusText: 'Too Many Requests', headers: { get: () => null } } as unknown as Response);
+
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+      await expect(fastClient.getFile('test-key')).rejects.toThrow('Figma API error: 429 Too Many Requests');
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    }, 10000);
   });
 });

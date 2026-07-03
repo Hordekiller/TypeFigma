@@ -54,4 +54,42 @@ describe('TailwindV4Generator', () => {
     const classes = gen.layoutToTailwind({ display: 'grid' });
     expect(classes).toContain('grid');
   });
+
+  it('should handle empty color tokens', () => {
+    const gen = new TailwindV4Generator({ ...mockTokens, colors: { primary: {}, secondary: {}, accent: {}, neutral: {}, success: {}, warning: {}, error: {}, info: {}, background: {}, text: {}, border: {} } });
+    const css = gen.generateThemeCSS();
+    expect(css).toContain('@import "tailwindcss"');
+  });
+
+  it('should handle empty layout in layoutToTailwind', () => {
+    const gen = new TailwindV4Generator(mockTokens);
+    const classes = gen.layoutToTailwind({});
+    expect(classes).toEqual([]);
+  });
+
+  it('should handle unknown layout properties gracefully', () => {
+    const gen = new TailwindV4Generator(mockTokens);
+    const classes = gen.layoutToTailwind({
+      display: 'flex',
+      justifyContent: 'unknown-value',
+    });
+    expect(classes).toContain('flex');
+  });
+
+  it('should handle minimal tokens', () => {
+    const gen = new TailwindV4Generator({
+      colors: mockTokens.colors,
+      typography: { fontFamilies: { heading: { name: 'Inter', weights: [400], fallback: 'sans-serif' }, body: { name: 'Inter', weights: [400], fallback: 'sans-serif' } }, fontSizes: {}, fontWeights: {}, lineHeights: {}, letterSpacing: {}, textStyles: {} },
+      spacing: {},
+      sizing: {},
+      borderRadius: {},
+      shadows: {},
+      borders: { width: {}, styles: {} },
+      transitions: { duration: {}, timing: {} },
+      breakpoints: {},
+      zIndex: {},
+    } as unknown as ExtractedTokens);
+    const css = gen.generateThemeCSS();
+    expect(css).toContain('@theme');
+  });
 });

@@ -71,6 +71,25 @@ describe('CssGenerator', () => {
       expect(css).toContain('@media');
       expect(css).toContain('max-width');
     });
+
+    it('should handle empty typography fontSizes', () => {
+      const css = gen.generateGlobal({
+        ...mockTokens,
+        typography: {
+          ...mockTokens.typography,
+          fontSizes: {},
+        },
+      });
+      expect(css).toContain(':root');
+    });
+
+    it('should not define ecommerce CSS variables when colors are absent', () => {
+      const { ecommerce: _, ...restColors } = mockTokens.colors;
+      const noEcom = { ...mockTokens, colors: restColors };
+      const css = gen.generateGlobal(noEcom);
+      const rootBlock = css.match(/:root\s*\{[^}]+\}/)?.[0] ?? '';
+      expect(rootBlock).not.toContain('--color-ecommerce');
+    });
   });
 
   describe('generateComponents', () => {
@@ -82,6 +101,11 @@ describe('CssGenerator', () => {
     it('should reference CSS variables', () => {
       const css = gen.generateComponents(mockTokens);
       expect(css).toContain('var(--');
+    });
+
+    it('should handle empty tokens', () => {
+      const css = gen.generateComponents({} as ExtractedTokens);
+      expect(typeof css).toBe('string');
     });
   });
 });

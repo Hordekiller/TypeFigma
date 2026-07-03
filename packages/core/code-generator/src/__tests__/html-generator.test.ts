@@ -72,4 +72,53 @@ describe('HtmlGenerator', () => {
     const html = gen.generatePage(mockComponents, mockTokens);
     expect(html).toContain('Hero');
   });
+
+  it('should handle empty components', () => {
+    const empty: ComponentClassification = {
+      headers: [], footers: [], navigation: [], heroes: [],
+      ctaSections: [], testimonials: [], galleries: [],
+      productCards: [], productDetails: [], cartComponents: [],
+      checkoutComponents: [], postCards: [], postDetail: [],
+      contactForms: [], searchBars: [], newsletters: [],
+      sections: [], containers: [], columns: [],
+    };
+    const html = gen.generatePage(empty, mockTokens);
+    expect(html).toContain('page-wrapper');
+    expect(html).not.toContain('site-header');
+    expect(html).not.toContain('site-footer');
+  });
+
+  it('should handle null tokens', () => {
+    const html = gen.generatePage(mockComponents, {} as ExtractedTokens);
+    expect(typeof html).toBe('string');
+    expect(html.length).toBeGreaterThan(0);
+  });
+
+  it('should generate component layout for product cards', () => {
+    const ecomTokens = {
+      ...mockTokens,
+      colors: {
+        ...mockTokens.colors,
+        ecommerce: { sale: '#ef4444', newArrival: '#10b981', outOfStock: '#6b7280', inStock: '#22c55e', price: '#171717', salePrice: '#ef4444', rating: '#f59e0b' },
+      },
+    };
+    const withProducts: ComponentClassification = {
+      ...mockComponents,
+      productCards: [{
+        id: 'pc1', figmaNodeId: 'pc1', name: 'Product Card', confidence: 0.9,
+        type: 'grid',
+        structure: {
+          productImage: { nodeId: 'img1', aspectRatio: '1/1', hasBorderRadius: true, hasHoverEffect: true },
+          productBadge: { nodeId: 'badge1', position: 'top-right' as const, text: 'Sale' },
+          productTitle: { nodeId: 'title1', maxLines: 2 },
+          productPrice: { nodeId: 'price1', format: 'sale' as const, hasCurrency: true },
+          productRating: { nodeId: 'rating1', style: 'stars' as const },
+          shortDescription: { nodeId: 'desc1', maxLength: 100 },
+          addToCartButton: { nodeId: 'atc1', text: 'Add to Cart' },
+        },
+      }],
+    };
+    const html = gen.generatePage(withProducts, ecomTokens);
+    expect(html).toContain('product-card');
+  });
 });
