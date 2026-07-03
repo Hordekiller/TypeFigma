@@ -3,7 +3,7 @@
   "type": "product-archive",
   "content": [
     {
-      "id": "pc-product-card_1_ee11e8e4",
+      "id": "pc-product-card_1_80304878",
       "elType": "container",
       "settings": {
         "content_width": "boxed",
@@ -35,7 +35,7 @@
       },
       "elements": [
         {
-          "id": "pc-image-wrap_d917f3b3",
+          "id": "pc-image-wrap_af13b506",
           "elType": "container",
           "settings": {
             "content_width": "boxed",
@@ -45,7 +45,7 @@
           },
           "elements": [
             {
-              "id": "image_612c71df",
+              "id": "image_e8ad6b75",
               "elType": "widget",
               "widgetType": "image",
               "settings": {
@@ -68,7 +68,7 @@
               }
             },
             {
-              "id": "text-editor_9005b28a",
+              "id": "text-editor_c3bf13f6",
               "elType": "widget",
               "widgetType": "text-editor",
               "settings": {
@@ -88,7 +88,7 @@
           ]
         },
         {
-          "id": "pc-content_24c1b0ee",
+          "id": "pc-content_f01fb4bf",
           "elType": "container",
           "settings": {
             "content_width": "boxed",
@@ -107,7 +107,7 @@
           },
           "elements": [
             {
-              "id": "heading_d7572aee",
+              "id": "heading_80eca2b3",
               "elType": "widget",
               "widgetType": "heading",
               "settings": {
@@ -129,7 +129,7 @@
               }
             },
             {
-              "id": "star-rating_a89877e9",
+              "id": "star-rating_2456af34",
               "elType": "widget",
               "widgetType": "star-rating",
               "settings": {
@@ -143,7 +143,7 @@
               }
             },
             {
-              "id": "text-editor_d212e652",
+              "id": "text-editor_ed044917",
               "elType": "widget",
               "widgetType": "text-editor",
               "settings": {
@@ -160,7 +160,7 @@
               }
             },
             {
-              "id": "text-editor_f543966b",
+              "id": "text-editor_452cc30e",
               "elType": "widget",
               "widgetType": "text-editor",
               "settings": {
@@ -171,7 +171,7 @@
               }
             },
             {
-              "id": "btn_3463f4e5",
+              "id": "btn_5f2b481b",
               "elType": "widget",
               "widgetType": "button",
               "settings": {

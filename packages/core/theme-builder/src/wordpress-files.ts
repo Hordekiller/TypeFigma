@@ -3,10 +3,11 @@ import type {
 } from '@typefigma/analyzer';
 import type { ElementorTemplate, GlobalSettings } from '@typefigma/elementor-mapper';
 import { ThemeJsonGenerator, WpBlockGenerator } from '@typefigma/code-generator';
+import * as zlib from 'zlib';
 
 export interface ThemeFile {
   path: string;
-  content: string;
+  content: string | Buffer;
 }
 
 export interface ThemeOptions {
@@ -733,6 +734,9 @@ add_action('customize_register', function ($wp_customize) {
     $colors = [
         'primary_color'   => ['label' => 'Primary Color', 'default' => '${this.analysis.designTokens.colors.primary['500'] ?? '#3b82f6'}'],
         'secondary_color' => ['label' => 'Secondary Color', 'default' => '${this.analysis.designTokens.colors.secondary['500'] ?? '#8b5cf6'}'],
+        'accent_color'    => ['label' => 'Accent Color', 'default' => '${this.analysis.designTokens.colors.accent['500'] ?? '#f59e0b'}'],
+        'body_bg'         => ['label' => 'Background Color', 'default' => '${this.analysis.designTokens.colors.background.body ?? '#ffffff'}'],
+        'text_color'      => ['label' => 'Text Color', 'default' => '${this.analysis.designTokens.colors.text.primary ?? '#171717'}'],
     ];
 
     foreach ($colors as $setting_key => $color) {
@@ -758,7 +762,8 @@ add_action('customize_register', function ($wp_customize) {
     ]);
 
     $wp_customize->add_setting('heading_font', [
-        'default' => 'Inter',
+        'default'           => '${this.analysis.designTokens.typography.fontFamilies.heading.name ?? 'Inter'}',
+        'sanitize_callback' => 'sanitize_text_field',
     ]);
 
     $wp_customize->add_control('heading_font', [
@@ -766,16 +771,21 @@ add_action('customize_register', function ($wp_customize) {
         'section' => '${this.options.themeSlug}_typography',
         'type'    => 'select',
         'choices' => [
-            'Inter'    => 'Inter',
-            'Roboto'   => 'Roboto',
+            'Inter'     => 'Inter',
+            'Roboto'    => 'Roboto',
             'Open Sans' => 'Open Sans',
-            'Lato'     => 'Lato',
+            'Lato'      => 'Lato',
             'Montserrat' => 'Montserrat',
+            'Poppins'   => 'Poppins',
+            'Playfair Display' => 'Playfair Display',
+            'Nunito'    => 'Nunito',
+            'Raleway'   => 'Raleway',
         ],
     ]);
 
     $wp_customize->add_setting('body_font', [
-        'default' => 'Inter',
+        'default'           => '${this.analysis.designTokens.typography.fontFamilies.body.name ?? 'Inter'}',
+        'sanitize_callback' => 'sanitize_text_field',
     ]);
 
     $wp_customize->add_control('body_font', [
@@ -783,16 +793,94 @@ add_action('customize_register', function ($wp_customize) {
         'section' => '${this.options.themeSlug}_typography',
         'type'    => 'select',
         'choices' => [
-            'Inter'    => 'Inter',
-            'Roboto'   => 'Roboto',
+            'Inter'     => 'Inter',
+            'Roboto'    => 'Roboto',
             'Open Sans' => 'Open Sans',
-            'Lato'     => 'Lato',
+            'Lato'      => 'Lato',
             'Montserrat' => 'Montserrat',
+            'Poppins'   => 'Poppins',
+            'Nunito'    => 'Nunito',
+            'Raleway'   => 'Raleway',
+        ],
+    ]);
+
+    $wp_customize->add_setting('base_font_size', [
+        'default'           => 16,
+        'sanitize_callback' => 'absint',
+    ]);
+
+    $wp_customize->add_control('base_font_size', [
+        'label'       => esc_html__('Base Font Size (px)', '${this.options.themeSlug}'),
+        'section'     => '${this.options.themeSlug}_typography',
+        'type'        => 'number',
+        'input_attrs' => ['min' => 12, 'max' => 24, 'step' => 1],
+    ]);
+
+    // === Layout Section ===
+    $wp_customize->add_section('${this.options.themeSlug}_layout', [
+        'title'    => esc_html__('Layout', '${this.options.themeSlug}'),
+        'priority' => 36,
+    ]);
+
+    $wp_customize->add_setting('container_width', [
+        'default'           => 1140,
+        'sanitize_callback' => 'absint',
+    ]);
+
+    $wp_customize->add_control('container_width', [
+        'label'       => esc_html__('Container Width (px)', '${this.options.themeSlug}'),
+        'section'     => '${this.options.themeSlug}_layout',
+        'type'        => 'number',
+        'input_attrs' => ['min' => 960, 'max' => 1920, 'step' => 10],
+    ]);
+
+    $wp_customize->add_setting('header_layout', [
+        'default' => 'default',
+    ]);
+
+    $wp_customize->add_control('header_layout', [
+        'label'   => esc_html__('Header Style', '${this.options.themeSlug}'),
+        'section' => '${this.options.themeSlug}_layout',
+        'type'    => 'select',
+        'choices' => [
+            'default' => esc_html__('Default', '${this.options.themeSlug}'),
+            'sticky'  => esc_html__('Sticky', '${this.options.themeSlug}'),
+            'transparent' => esc_html__('Transparent', '${this.options.themeSlug}'),
+        ],
+    ]);
+
+    $wp_customize->add_setting('sidebar_position', [
+        'default' => 'right',
+    ]);
+
+    $wp_customize->add_control('sidebar_position', [
+        'label'   => esc_html__('Sidebar Position', '${this.options.themeSlug}'),
+        'section' => '${this.options.themeSlug}_layout',
+        'type'    => 'select',
+        'choices' => [
+            'right' => esc_html__('Right', '${this.options.themeSlug}'),
+            'left'  => esc_html__('Left', '${this.options.themeSlug}'),
+            'none'  => esc_html__('No Sidebar', '${this.options.themeSlug}'),
+        ],
+    ]);
+
+    $wp_customize->add_setting('blog_layout', [
+        'default' => 'grid',
+    ]);
+
+    $wp_customize->add_control('blog_layout', [
+        'label'   => esc_html__('Blog Layout', '${this.options.themeSlug}'),
+        'section' => '${this.options.themeSlug}_layout',
+        'type'    => 'select',
+        'choices' => [
+            'grid'  => esc_html__('Grid', '${this.options.themeSlug}'),
+            'list'  => esc_html__('List', '${this.options.themeSlug}'),
+            'classic' => esc_html__('Classic', '${this.options.themeSlug}'),
         ],
     ]);
 
     ${this.analysis.projectType.type === 'ecommerce' ? `
-    // === Shop Layout Section ===
+    // === WooCommerce Shop Layout ===
     if (class_exists('WooCommerce')) {
         $wp_customize->add_section('${this.options.themeSlug}_shop', [
             'title'    => esc_html__('Shop Layout', '${this.options.themeSlug}'),
@@ -800,30 +888,75 @@ add_action('customize_register', function ($wp_customize) {
         ]);
 
         $wp_customize->add_setting('${this.options.themeSlug}_products_per_row', [
-            'default' => 4,
+            'default'           => 4,
+            'sanitize_callback' => 'absint',
         ]);
 
         $wp_customize->add_control('${this.options.themeSlug}_products_per_row', [
-            'label'   => esc_html__('Products per row', '${this.options.themeSlug}'),
-            'section' => '${this.options.themeSlug}_shop',
-            'type'    => 'number',
-            'input_attrs' => [
-                'min' => 2,
-                'max' => 6,
-            ],
+            'label'       => esc_html__('Products per row', '${this.options.themeSlug}'),
+            'section'     => '${this.options.themeSlug}_shop',
+            'type'        => 'number',
+            'input_attrs' => ['min' => 2, 'max' => 6],
         ]);
 
         $wp_customize->add_setting('${this.options.themeSlug}_products_per_page', [
-            'default' => 12,
+            'default'           => 12,
+            'sanitize_callback' => 'absint',
         ]);
 
         $wp_customize->add_control('${this.options.themeSlug}_products_per_page', [
-            'label'   => esc_html__('Products per page', '${this.options.themeSlug}'),
+            'label'       => esc_html__('Products per page', '${this.options.themeSlug}'),
+            'section'     => '${this.options.themeSlug}_shop',
+            'type'        => 'number',
+            'input_attrs' => ['min' => 3, 'max' => 60],
+        ]);
+
+        $wp_customize->add_setting('${this.options.themeSlug}_catalog_mode', [
+            'default' => 'grid',
+        ]);
+
+        $wp_customize->add_control('${this.options.themeSlug}_catalog_mode', [
+            'label'   => esc_html__('Catalog Display', '${this.options.themeSlug}'),
             'section' => '${this.options.themeSlug}_shop',
-            'type'    => 'number',
+            'type'    => 'select',
+            'choices' => [
+                'grid' => esc_html__('Grid', '${this.options.themeSlug}'),
+                'list' => esc_html__('List', '${this.options.themeSlug}'),
+            ],
+        ]);
+
+        $wp_customize->add_setting('${this.options.themeSlug}_show_quick_view', [
+            'default' => false,
+        ]);
+
+        $wp_customize->add_control('${this.options.themeSlug}_show_quick_view', [
+            'label'   => esc_html__('Enable Quick View', '${this.options.themeSlug}'),
+            'section' => '${this.options.themeSlug}_shop',
+            'type'    => 'checkbox',
         ]);
     }
     ` : ''}
+
+    // === Social Links Section ===
+    $wp_customize->add_section('${this.options.themeSlug}_social', [
+        'title'       => esc_html__('Social Links', '${this.options.themeSlug}'),
+        'priority'    => 45,
+        'description' => esc_html__('Enter full URLs including https://', '${this.options.themeSlug}'),
+    ]);
+
+    $social_links = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'github'];
+    foreach ($social_links as $social) {
+        $wp_customize->add_setting('${this.options.themeSlug}_social_' . $social, [
+            'default'           => '',
+            'sanitize_callback' => 'esc_url_raw',
+        ]);
+
+        $wp_customize->add_control('${this.options.themeSlug}_social_' . $social, [
+            'label'   => ucfirst($social),
+            'section' => '${this.options.themeSlug}_social',
+            'type'    => 'url',
+        ]);
+    }
 });
 `;
   }
@@ -1011,6 +1144,90 @@ global $product;
 
     <?php do_action('woocommerce_after_shop_loop_item'); ?>
 </li>`;
+  }
+
+  buildWooCartPhp(): string {
+    return `<?php
+/**
+ * WooCommerce Cart Template
+ *
+ * @package ${this.options.themeSlug}
+ */
+
+get_header('shop');
+?>
+<main id="primary" class="site-main">
+  <div class="container">
+    <?php
+    do_action('woocommerce_before_main_content');
+
+    while (have_posts()) : the_post();
+      wc_get_template_part('content', 'page');
+    endwhile;
+
+    do_action('woocommerce_after_main_content');
+    ?>
+  </div>
+</main>
+<?php
+get_footer('shop');
+`;
+  }
+
+  buildWooCheckoutPhp(): string {
+    return `<?php
+/**
+ * WooCommerce Checkout Template
+ *
+ * @package ${this.options.themeSlug}
+ */
+
+get_header('shop');
+?>
+<main id="primary" class="site-main">
+  <div class="container">
+    <?php
+    do_action('woocommerce_before_main_content');
+
+    while (have_posts()) : the_post();
+      wc_get_template_part('content', 'page');
+    endwhile;
+
+    do_action('woocommerce_after_main_content');
+    ?>
+  </div>
+</main>
+<?php
+get_footer('shop');
+`;
+  }
+
+  buildWooMyAccountPhp(): string {
+    return `<?php
+/**
+ * WooCommerce My Account Template
+ *
+ * @package ${this.options.themeSlug}
+ */
+
+get_header('shop');
+?>
+<main id="primary" class="site-main">
+  <div class="container">
+    <?php
+    do_action('woocommerce_before_main_content');
+
+    while (have_posts()) : the_post();
+      wc_get_template_part('content', 'page');
+    endwhile;
+
+    do_action('woocommerce_after_main_content');
+    ?>
+  </div>
+</main>
+<?php
+get_footer('shop');
+`;
   }
 
   buildWooCss(): string {
@@ -1552,6 +1769,103 @@ add_action('elementor/elements/categories_registered', function ($elements_manag
     }));
   }
 
+  buildScreenshotPng(): Buffer {
+    const width = 880;
+    const height = 660;
+    const themeName = this.options.themeName;
+    const projectType = this.analysis.projectType.type;
+    const primary = this.analysis.designTokens.colors.primary['500'] ?? '#3b82f6';
+    const bg = this.analysis.designTokens.colors.neutral['50'] ?? '#fafafa';
+
+    const r = (hex: string) => parseInt(hex.slice(1, 3), 16);
+    const g = (hex: string) => parseInt(hex.slice(3, 5), 16);
+    const b = (hex: string) => parseInt(hex.slice(5, 7), 16);
+
+    const bgR = r(bg), bgG = g(bg), bgB = b(bg);
+    const prR = r(primary), prG = g(primary), prB = b(primary);
+
+    const raw = Buffer.alloc(height * width * 4);
+    const headerHeight = 80;
+    const footerHeight = 60;
+    const sidebarW = 260;
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = (y * width + x) * 4;
+        let cr = bgR, cg = bgG, cb = bgB, ca = 255;
+
+        if (y < headerHeight) {
+          cr = prR; cg = prG; cb = prB;
+        } else if (y >= height - footerHeight) {
+          cr = Math.round(prR * 0.85 + bgR * 0.15);
+          cg = Math.round(prG * 0.85 + bgG * 0.15);
+          cb = Math.round(prB * 0.85 + bgB * 0.15);
+        } else if (x < sidebarW) {
+          cr = Math.round(bgR * 0.97); cg = Math.round(bgG * 0.97); cb = Math.round(bgB * 0.97);
+        }
+
+        raw[idx] = cr;
+        raw[idx + 1] = cg;
+        raw[idx + 2] = cb;
+        raw[idx + 3] = ca;
+      }
+    }
+
+    const wB = Buffer.alloc(4); wB.writeUInt32BE(width);
+    const hB = Buffer.alloc(4); hB.writeUInt32BE(height);
+
+    const rawData = Buffer.concat([
+      Buffer.from([0x49, 0x48, 0x44, 0x52]), wB, hB,
+      Buffer.from([8, 6, 0, 0, 0]),
+      crc32(Buffer.concat([Buffer.from([0x49, 0x48, 0x44, 0x52]), wB, hB, Buffer.from([8, 6, 0, 0, 0])])),
+    ]);
+
+    const scanlines: Buffer[] = [];
+    const filterNone = Buffer.from([0]);
+    for (let y = 0; y < height; y++) {
+      const row = raw.subarray(y * width * 4, (y + 1) * width * 4);
+      scanlines.push(Buffer.concat([filterNone, row]));
+    }
+
+    const rawRows = Buffer.concat(scanlines);
+    const deflated = zlib.deflateSync(rawRows);
+    const idatData = Buffer.concat([
+      Buffer.from([0x49, 0x44, 0x41, 0x54]),
+      deflated,
+      crc32(Buffer.concat([Buffer.from([0x49, 0x44, 0x41, 0x54]), deflated])),
+    ]);
+
+    const ihdrLen = Buffer.alloc(4); ihdrLen.writeUInt32BE(13);
+    const idatLen = Buffer.alloc(4); idatLen.writeUInt32BE(deflated.length + 4 + 4);
+
+    const iend = Buffer.concat([
+      Buffer.from([0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44]),
+      crc32(Buffer.from([0x49, 0x45, 0x4E, 0x44])),
+    ]);
+
+    const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+
+    return Buffer.concat([signature, ihdrLen, rawData, idatLen, idatData, iend]);
+
+    function crc32(buf: Buffer): Buffer {
+      const table = new Int32Array(256);
+      for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) {
+          c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        }
+        table[n] = c;
+      }
+      let crc = 0xFFFFFFFF;
+      for (let i = 0; i < buf.length; i++) {
+        crc = table[(crc ^ buf[i]) & 0xFF] ^ (crc >>> 8);
+      }
+      const result = Buffer.alloc(4);
+      result.writeUInt32BE((crc ^ 0xFFFFFFFF) >>> 0);
+      return result;
+    }
+  }
+
   getAllFiles(
     elementorTemplates: ElementorTemplate[],
     globalSettings: GlobalSettings,
@@ -1591,11 +1905,15 @@ add_action('elementor/elements/categories_registered', function ($elements_manag
         { path: 'woocommerce/archive-product.php', content: this.buildWooArchivePhp() },
         { path: 'woocommerce/single-product.php', content: this.buildWooSinglePhp() },
         { path: 'woocommerce/content-product.php', content: this.buildWooContentProductPhp() },
+        { path: 'woocommerce/cart.php', content: this.buildWooCartPhp() },
+        { path: 'woocommerce/checkout.php', content: this.buildWooCheckoutPhp() },
+        { path: 'woocommerce/myaccount.php', content: this.buildWooMyAccountPhp() },
         { path: 'assets/css/woocommerce.css', content: this.buildWooCss() },
       );
     }
 
     files.push(
+      { path: 'screenshot.png', content: this.buildScreenshotPng() },
       { path: 'inc/elementor-widgets.php', content: this.buildElementorWidgetsPhp() },
     );
 

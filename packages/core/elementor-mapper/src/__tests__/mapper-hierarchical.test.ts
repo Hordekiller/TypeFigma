@@ -24,7 +24,7 @@ const minimalTokens: ExtractedTokens = {
     },
     fontSizes: { xs: '12px', sm: '14px', base: '16px', lg: '18px', xl: '20px', '2xl': '24px', '3xl': '30px', '4xl': '36px', '5xl': '48px' },
     fontWeights: { normal: 400, medium: 500, semibold: 600, bold: 700 },
-    lineHeights: { none: '1', tight: '1.25', snug: '1.375', normal: '1.5', relaxed: '1.625', loose: '2' },
+    lineHeights: { none: 1, tight: 1.25, snug: 1.375, normal: 1.5, relaxed: 1.625, loose: 2 },
     letterSpacing: { tighter: '-0.05em', tight: '-0.025em', normal: '0', wide: '0.025em', wider: '0.05em', widest: '0.1em' },
     textStyles: {
       h1: { fontFamily: 'Inter', fontSize: '48px', fontWeight: 700, lineHeight: '1.2', letterSpacing: '-0.02em' },
@@ -89,7 +89,11 @@ describe('ElementorMapper.generateHierarchicalSelection()', () => {
   it('should include header when headers are present', () => {
     const mapper = createMapper();
     const comps = emptyClassification();
-    comps.headers.push({ type: 'header', hasLogo: true, hasMenu: true, hasSearch: false, hasCTA: false, style: 'dark', alignment: 'center', hasContactInfo: false, containerType: 'fixed' });
+    comps.headers.push({
+      id: 'header_1', figmaNodeId: 'n1', name: 'Header', confidence: 0.9,
+      type: 'static', hasLogo: true, hasMenu: true, hasSearch: false, hasCTA: false,
+      layout: { alignment: 'center', height: '80px', padding: { top: '16px', right: '40px', bottom: '16px', left: '40px' } },
+    });
     const result = mapper.generateHierarchicalSelection(comps);
     expect(result.selectedSections).toContain('header');
   });
@@ -97,7 +101,10 @@ describe('ElementorMapper.generateHierarchicalSelection()', () => {
   it('should include hero and about when sections are present', () => {
     const mapper = createMapper();
     const comps = emptyClassification();
-    comps.sections.push({ type: 'section', columns: 2, layout: 'side-by-side', content: [], containerType: 'boxed' });
+    comps.sections.push({
+      id: 'section_1', figmaNodeId: 'n2', name: 'Section', type: 'generic', confidence: 0.8,
+      layout: { fullWidth: false, hasContainer: true, padding: { top: '80px', right: '40px', bottom: '80px', left: '40px' } },
+    });
     const result = mapper.generateHierarchicalSelection(comps);
     expect(result.selectedSections).toContain('hero');
     expect(result.selectedSections).toContain('about');
@@ -108,8 +115,36 @@ describe('ElementorMapper.generateHierarchicalSelection()', () => {
   it('should include WooCommerce sections from product components', () => {
     const mapper = createMapper();
     const comps = emptyClassification();
-    comps.productCards.push({ type: 'product-card', hasPrice: true, hasRating: false, hasButton: true, layout: 'grid' });
-    comps.productDetails.push({ type: 'product-detail', hasGallery: true, hasTabs: true, hasRelated: true, layout: 'standard' });
+    comps.productCards.push({
+      id: 'pc_1', figmaNodeId: 'n3', name: 'Product Card', confidence: 0.9,
+      structure: {
+        productImage: { nodeId: 'img1', aspectRatio: '1:1', hasBorderRadius: true, hasHoverEffect: true },
+        productTitle: { nodeId: 'title1', maxLines: 2 },
+        productPrice: { nodeId: 'price1', format: 'regular', hasCurrency: true },
+        addToCartButton: { nodeId: 'btn1', text: 'Add to Cart' },
+      },
+      layout: { type: 'card', alignment: 'center', spacing: { top: '8px', right: '8px', bottom: '8px', left: '8px' }, containerPadding: { top: '16px', right: '16px', bottom: '16px', left: '16px' } },
+    });
+    comps.productDetails.push({
+      id: 'pd_1', figmaNodeId: 'n4', confidence: 0.9,
+      layout: 'fullwidth',
+      sections: {
+        productGallery: { nodeId: 'gal1', type: 'grid', hasZoom: true, hasLightbox: true },
+        productMeta: {
+          title: { nodeId: 'title2', tag: 'h1' },
+          price: { nodeId: 'price2', showSalePrice: true, showSavings: false },
+          rating: { nodeId: 'rating1', showCount: true, linkToReviews: true },
+          availability: { nodeId: 'avail1' },
+        },
+        shortDescription: { nodeId: 'desc1' },
+        addToCart: {
+          quantitySelector: { nodeId: 'qty1', style: 'stepper' },
+          addToCartButton: { nodeId: 'btn2', text: 'Add to Cart' },
+        },
+        productActions: {},
+        productTabs: { nodeId: 'tabs1', type: 'tabs', hasDescription: true, hasAdditionalInfo: true, hasReviews: true },
+      },
+    });
     const result = mapper.generateHierarchicalSelection(comps);
     expect(result.selectedSections).toContain('product-grid');
     expect(result.selectedSections).toContain('product-single');
@@ -118,8 +153,14 @@ describe('ElementorMapper.generateHierarchicalSelection()', () => {
   it('should include cart and checkout from cart/checkout components', () => {
     const mapper = createMapper();
     const comps = emptyClassification();
-    comps.cartComponents.push({ type: 'cart', itemCount: 3, hasCoupon: true, layout: 'standard' });
-    comps.checkoutComponents.push({ type: 'checkout', hasBilling: true, hasShipping: true, hasPayment: true, layout: 'standard' });
+    comps.cartComponents.push({
+      id: 'cart_1', figmaNodeId: 'n5', confidence: 0.9,
+      type: 'full-cart', hasQuantityControl: true, hasRemoveButton: true, hasCouponInput: true, hasProceedToCheckout: true,
+    });
+    comps.checkoutComponents.push({
+      id: 'checkout_1', figmaNodeId: 'n6', confidence: 0.9,
+      layout: 'two-column', hasBillingForm: true, hasShippingForm: true, hasOrderSummary: true, hasPaymentMethods: true,
+    });
     const result = mapper.generateHierarchicalSelection(comps);
     expect(result.selectedSections).toContain('cart-page');
     expect(result.selectedSections).toContain('checkout-page');
@@ -128,7 +169,10 @@ describe('ElementorMapper.generateHierarchicalSelection()', () => {
   it('should include testimonial section when testimonials are present', () => {
     const mapper = createMapper();
     const comps = emptyClassification();
-    comps.testimonials.push({ type: 'testimonial', hasImage: true, hasRating: false, layout: 'card' });
+    comps.testimonials.push({
+      id: 'test_1', figmaNodeId: 'n7', confidence: 0.9,
+      layout: 'grid', hasAvatar: true, hasRating: false, hasCompanyLogo: false,
+    });
     const result = mapper.generateHierarchicalSelection(comps);
     expect(result.selectedSections).toContain('testimonials');
   });
@@ -136,8 +180,15 @@ describe('ElementorMapper.generateHierarchicalSelection()', () => {
   it('should include blog sections from post cards', () => {
     const mapper = createMapper();
     const comps = emptyClassification();
-    comps.postCards.push({ type: 'post-card', hasImage: true, hasExcerpt: true, hasMeta: true, layout: 'grid' });
-    comps.postDetail.push({ type: 'post-detail', hasFeaturedImage: true, hasComments: true, layout: 'standard' });
+    comps.postCards.push({
+      id: 'post_1', figmaNodeId: 'n8', confidence: 0.9,
+      hasImage: true, hasCategory: true, hasDate: true, hasAuthor: true, hasExcerpt: true, hasReadMore: true,
+      layout: 'vertical',
+    });
+    comps.postDetail.push({
+      id: 'postd_1', figmaNodeId: 'n9', confidence: 0.9,
+      hasFeaturedImage: true, hasAuthorBio: true, hasRelatedPosts: true, hasComments: true, hasShareButtons: true,
+    });
     const result = mapper.generateHierarchicalSelection(comps);
     expect(result.selectedSections).toContain('blog-posts');
     expect(result.selectedSections).toContain('single-post');
@@ -146,8 +197,12 @@ describe('ElementorMapper.generateHierarchicalSelection()', () => {
   it('should return unique sections (no duplicates)', () => {
     const mapper = createMapper();
     const comps = emptyClassification();
-    comps.headers.push({ type: 'header', hasLogo: true, hasMenu: true, hasSearch: false, hasCTA: false, style: 'dark', alignment: 'center', hasContactInfo: false, containerType: 'fixed' });
-    comps.navigation.push({ type: 'navigation', items: 5, layout: 'horizontal', hasDropdown: true, hasSearch: false });
+    comps.headers.push({
+      id: 'header_2', figmaNodeId: 'n10', name: 'Header', confidence: 0.9,
+      type: 'static', hasLogo: true, hasMenu: true, hasSearch: false, hasCTA: false,
+      layout: { alignment: 'center', height: '80px', padding: { top: '16px', right: '40px', bottom: '16px', left: '40px' } },
+    });
+    comps.navigation.push({ id: 'nav_1', figmaNodeId: 'n11', type: 'horizontal', items: 5, hasDropdown: true });
     // Both headers and navigation add 'header' — should appear only once
     const result = mapper.generateHierarchicalSelection(comps);
     const unique = new Set(result.selectedSections);
@@ -157,7 +212,10 @@ describe('ElementorMapper.generateHierarchicalSelection()', () => {
   it('should include footer when footers are present', () => {
     const mapper = createMapper();
     const comps = emptyClassification();
-    comps.footers.push({ type: 'footer', columns: 4, hasSocial: true, hasNewsletter: false, hasCopyright: true, layout: 'standard' });
+    comps.footers.push({
+      id: 'footer_1', figmaNodeId: 'n12', name: 'Footer', confidence: 0.9,
+      columns: 4, hasSocial: true, hasNewsletter: false, hasMenu: true,
+    });
     const result = mapper.generateHierarchicalSelection(comps);
     expect(result.selectedSections).toContain('footer');
   });
@@ -289,8 +347,8 @@ describe('ElementorMapper.generateFromTemplates()', () => {
       widgetOverrides: {},
     });
     const root = result[0].content[0];
-    const hasWidgets = root.elements!.some((group: { elType: string; elements: { elType: string; widgetType?: string }[] }) =>
-      group.elements && group.elements.some((w: { elType: string; widgetType?: string }) => w.elType === 'widget' && w.widgetType),
+    const hasWidgets = root.elements!.some((group) =>
+      group.elements && group.elements.some((w) => w.elType === 'widget' && w.widgetType),
     );
     expect(hasWidgets).toBe(true);
   });
@@ -318,7 +376,6 @@ describe('ElementorMapper.generateFromTemplates()', () => {
       { selectedSections: allSections, selectedGroups: {}, widgetOverrides: {} },
       ['ecommerce'],
     );
-    const keys = result.map(t => mapTitleToKey(t.title));
     // WooCommerce sections should appear, blog/basic should not
     for (const t of result) {
       const template = getSectionTemplateFromTitle(t.title);
@@ -338,17 +395,12 @@ describe('ElementorMapper.generateFromTemplates()', () => {
     expect(result.length).toBe(6);
     const types = result.map(t => t.title);
     expect(types).toContain('Header');
-    expect(types).toContain('Hero');
+    expect(types).toContain('Hero Section');
   });
 });
 
 // Helper
-function mapTitleToKey(title: string): string {
-  return title.toLowerCase().replace(/\s+/g, '-');
-}
-
 function getSectionTemplateFromTitle(title: string) {
-  const { getSectionTemplate } = require('../templates.js');
   const key = title.toLowerCase().replace(/\s+/g, '-');
   return getSectionTemplate(key);
 }

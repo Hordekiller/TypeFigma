@@ -8,7 +8,7 @@ const VALID_DOC_TYPES: ElementorDocumentType[] = [
   'product', 'product-archive', 'error-404', 'popup',
 ];
 
-const VALID_CATEGORIES = ['basic', 'woocommerce', 'marketing', 'utility', 'blog', 'page'];
+const VALID_CATEGORIES = ['theme-builder', 'woocommerce', 'general-pro', 'basic', 'form', 'media', 'social'];
 
 function validateWidgetType(wt: string): boolean {
   return typeof wt === 'string' && wt.length > 0;

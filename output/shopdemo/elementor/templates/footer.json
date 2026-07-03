@@ -3,7 +3,7 @@
   "type": "footer",
   "content": [
     {
-      "id": "footer_78181d83",
+      "id": "footer_52ae8e10",
       "elType": "container",
       "settings": {
         "content_width": "full",
@@ -34,7 +34,7 @@
       },
       "elements": [
         {
-          "id": "footer-grid_4181cc40",
+          "id": "footer-grid_80e2f121",
           "elType": "container",
           "settings": {
             "content_width": "boxed",
@@ -47,7 +47,7 @@
           },
           "elements": [
             {
-              "id": "footer-col-1_49ce65f8",
+              "id": "footer-col-1_96b16045",
               "elType": "container",
               "settings": {
                 "content_width": "boxed",
@@ -59,7 +59,7 @@
               },
               "elements": [
                 {
-                  "id": "heading_6121f0af",
+                  "id": "heading_ccdc2b8b",
                   "elType": "widget",
                   "widgetType": "heading",
                   "settings": {
@@ -71,7 +71,7 @@
                   }
                 },
                 {
-                  "id": "wp-widget-pages_e0fec7c1",
+                  "id": "wp-widget-pages_755a71d6",
                   "elType": "widget",
                   "widgetType": "wp-widget-pages",
                   "settings": {
@@ -81,7 +81,7 @@
               ]
             },
             {
-              "id": "footer-col-2_b46b42f0",
+              "id": "footer-col-2_c5964601",
               "elType": "container",
               "settings": {
                 "content_width": "boxed",
@@ -93,7 +93,7 @@
               },
               "elements": [
                 {
-                  "id": "heading_9704253b",
+                  "id": "heading_226478f2",
                   "elType": "widget",
                   "widgetType": "heading",
                   "settings": {
@@ -105,7 +105,7 @@
                   }
                 },
                 {
-                  "id": "wp-widget-pages_599252c2",
+                  "id": "wp-widget-pages_781cab26",
                   "elType": "widget",
                   "widgetType": "wp-widget-pages",
                   "settings": {
@@ -115,7 +115,7 @@
               ]
             },
             {
-              "id": "footer-col-3_87d82032",
+              "id": "footer-col-3_3b955d91",
               "elType": "container",
               "settings": {
                 "content_width": "boxed",
@@ -127,7 +127,7 @@
               },
               "elements": [
                 {
-                  "id": "heading_951162f0",
+                  "id": "heading_e9a89d9b",
                   "elType": "widget",
                   "widgetType": "heading",
                   "settings": {
@@ -139,7 +139,7 @@
                   }
                 },
                 {
-                  "id": "wp-widget-pages_fc36c3ea",
+                  "id": "wp-widget-pages_fea9cb28",
                   "elType": "widget",
                   "widgetType": "wp-widget-pages",
                   "settings": {
@@ -149,7 +149,7 @@
               ]
             },
             {
-              "id": "footer-col-4_9010f88a",
+              "id": "footer-col-4_6e41ba15",
               "elType": "container",
               "settings": {
                 "content_width": "boxed",
@@ -161,7 +161,7 @@
               },
               "elements": [
                 {
-                  "id": "heading_1b5b2bd2",
+                  "id": "heading_c88144bb",
                   "elType": "widget",
                   "widgetType": "heading",
                   "settings": {
@@ -173,7 +173,7 @@
                   }
                 },
                 {
-                  "id": "wp-widget-pages_4aae0a08",
+                  "id": "wp-widget-pages_824f4815",
                   "elType": "widget",
                   "widgetType": "wp-widget-pages",
                   "settings": {
@@ -185,7 +185,7 @@
           ]
         },
         {
-          "id": "footer-newsletter_26d5573f",
+          "id": "footer-newsletter_7644bf9a",
           "elType": "container",
           "settings": {
             "content_width": "boxed",
@@ -201,7 +201,7 @@
           },
           "elements": [
             {
-              "id": "form_f7afbd99",
+              "id": "form_e4389941",
               "elType": "widget",
               "widgetType": "form",
               "settings": {
@@ -220,7 +220,7 @@
           ]
         },
         {
-          "id": "footer-bottom_cc00ecb3",
+          "id": "footer-bottom_cd787b68",
           "elType": "container",
           "settings": {
             "content_width": "boxed",
@@ -249,7 +249,7 @@
           },
           "elements": [
             {
-              "id": "text-editor_6cd2540a",
+              "id": "text-editor_dac31ce7",
               "elType": "widget",
               "widgetType": "text-editor",
               "settings": {

@@ -3,7 +3,7 @@
   "type": "header",
   "content": [
     {
-      "id": "header_aac06ad6",
+      "id": "header_3e59f679",
       "elType": "container",
       "settings": {
         "content_width": "full",
@@ -43,7 +43,7 @@
       },
       "elements": [
         {
-          "id": "image_ce237511",
+          "id": "image_f38b804c",
           "elType": "widget",
           "widgetType": "image",
           "settings": {
@@ -62,7 +62,7 @@
           }
         },
         {
-          "id": "nav-menu_d0755a7f",
+          "id": "nav-menu_db5f02a8",
           "elType": "widget",
           "widgetType": "nav-menu",
           "settings": {
@@ -75,7 +75,7 @@
           }
         },
         {
-          "id": "search-form_d48528dc",
+          "id": "search-form_e97bacf3",
           "elType": "widget",
           "widgetType": "search-form",
           "settings": {
@@ -86,7 +86,7 @@
           }
         },
         {
-          "id": "btn_4dbaf8ff",
+          "id": "btn_c90194c4",
           "elType": "widget",
           "widgetType": "button",
           "settings": {

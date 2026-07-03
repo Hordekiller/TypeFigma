@@ -3,7 +3,7 @@
   "type": "section",
   "content": [
     {
-      "id": "blog-posts_f53fd80e",
+      "id": "blog-posts_f882c745",
       "elType": "container",
       "settings": {
         "content_width": "boxed",
@@ -15,7 +15,7 @@
       },
       "elements": [
         {
-          "id": "posts-header_6e2243d3",
+          "id": "posts-header_a1ac4034",
           "elType": "container",
           "settings": {
             "content_width": "boxed",
@@ -25,7 +25,7 @@
           },
           "elements": [
             {
-              "id": "heading_bfc70889",
+              "id": "heading_1aa98526",
               "elType": "widget",
               "widgetType": "heading",
               "settings": {
@@ -35,7 +35,7 @@
               }
             },
             {
-              "id": "btn_f2b8ba21",
+              "id": "btn_7d3ffcdf",
               "elType": "widget",
               "widgetType": "button",
               "settings": {
@@ -60,7 +60,7 @@
           ]
         },
         {
-          "id": "posts_ae961c38",
+          "id": "posts_f5d2bf8f",
           "elType": "widget",
           "widgetType": "posts",
           "settings": {
