@@ -1,8 +1,29 @@
 {
   "name": "typefigma",
   "version": "1.0.0",
-  "private": true,
-  "description": "Figma to WordPress Theme - 10-Step Pipeline Converter",
+  "private": false,
+  "description": "Figma to WordPress Theme — 10-Step Pipeline Converter",
+  "license": "GPL-2.0-or-later",
+  "author": "Hordekiller",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hordekiller/TypeFigma.git"
+  },
+  "homepage": "https://github.com/Hordekiller/TypeFigma#readme",
+  "bugs": {
+    "url": "https://github.com/Hordekiller/TypeFigma/issues"
+  },
+  "keywords": [
+    "figma",
+    "wordpress",
+    "theme",
+    "elementor",
+    "woocommerce",
+    "figma-to-wordpress",
+    "design-to-code",
+    "automation",
+    "pipeline"
+  ],
   "workspaces": [
     "packages/core/*",
     "packages/cli",
