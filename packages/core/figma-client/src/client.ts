@@ -1,4 +1,4 @@
-import type { FigmaFile, FigmaStyles } from './types.js';
+import type { FigmaFile, FigmaStyles, FigmaVariablesResponse } from './types.js';
 
 const FIGMA_API_BASE = 'https://api.figma.com/v1';
 
@@ -41,6 +41,10 @@ export class FigmaClient {
     const idsParam = ids.join(',');
     const result = await this.request<{ images: Record<string, string> }>(`/images/${fileKey}?ids=${idsParam}`);
     return result.images;
+  }
+
+  async getVariables(fileKey: string): Promise<FigmaVariablesResponse> {
+    return this.request<FigmaVariablesResponse>(`/files/${fileKey}/variables/local`);
   }
 
   extractFileKey(url: string): string {

@@ -1,4 +1,4 @@
-import type { FigmaFile, FigmaStyles, Color } from '@typefigma/figma-client';
+import type { FigmaFile, FigmaStyles, Color, SceneNode } from '@typefigma/figma-client';
 import type {
   ExtractedTokens,
   ColorTokens,
@@ -7,15 +7,35 @@ import type {
   TransitionTokens,
 } from './types.js';
 
+interface ColorUsage {
+  hex: string;
+  count: number;
+  contexts: string[];
+}
+
+interface FontUsage {
+  family: string;
+  weight: number;
+  size: number;
+  count: number;
+}
+
 export class TokenExtractor {
   extract(file: FigmaFile, styles?: FigmaStyles): ExtractedTokens {
+    const allNodes = this.flattenTree(file.document);
+
+    const colorUsages = this.scanColorUsage(allNodes, styles);
+    const fontUsages = this.scanFontUsage(allNodes, styles);
+    const spacingValues = this.scanSpacingValues(allNodes);
+    const borderRadiusValues = this.scanBorderRadii(allNodes);
+
     return {
-      colors: this.extractColors(file, styles),
-      typography: this.extractTypography(file, styles),
-      spacing: this.generateSpacingScale(),
-      sizing: this.generateSizingScale(),
-      borderRadius: this.generateBorderRadii(),
-      shadows: this.generateShadows(styles),
+      colors: this.buildColorTokens(colorUsages, styles),
+      typography: this.buildTypographyTokens(fontUsages, styles),
+      spacing: this.buildSpacingScale(spacingValues),
+      sizing: this.buildSizingScale(),
+      borderRadius: this.buildBorderRadii(borderRadiusValues),
+      shadows: this.generateShadows(allNodes, styles),
       borders: this.generateBorderTokens(),
       transitions: this.generateTransitions(),
       breakpoints: this.generateBreakpoints(),
@@ -23,16 +43,87 @@ export class TokenExtractor {
     };
   }
 
-  // ── Colors ─────────────────────────────────────────────
-
-  private rgbToHex(color: Color): string {
-    const r = Math.round(color.r * 255);
-    const g = Math.round(color.g * 255);
-    const b = Math.round(color.b * 255);
-    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  private flattenTree(node: { children?: SceneNode[] }): SceneNode[] {
+    const result: SceneNode[] = [];
+    const walk = (n: { children?: SceneNode[] }) => {
+      if (n.children) {
+        for (const child of n.children) {
+          result.push(child);
+          walk(child);
+        }
+      }
+    };
+    walk(node);
+    return result;
   }
 
-  private extractColors(_file: FigmaFile, styles?: FigmaStyles): ColorTokens {
+  // ── Color Scanning ──────────────────────────────────
+
+  private scanColorUsage(nodes: SceneNode[], styles?: FigmaStyles): ColorUsage[] {
+    const usageMap = new Map<string, ColorUsage>();
+
+    const record = (hex: string, context: string) => {
+      const existing = usageMap.get(hex);
+      if (existing) {
+        existing.count++;
+        if (!existing.contexts.includes(context)) existing.contexts.push(context);
+      } else {
+        usageMap.set(hex, { hex, count: 1, contexts: [context] });
+      }
+    };
+
+    for (const node of nodes) {
+      if (!node.visible) continue;
+
+      if (node.fills) {
+        for (const fill of node.fills) {
+          if (fill.visible !== false && fill.color) {
+            const hex = this.rgbToHex(fill.color);
+            const alpha = fill.color.a;
+            if (alpha >= 0.01) {
+              record(hex, alpha < 1 ? 'fill-transparent' : 'fill');
+            }
+          }
+        }
+      }
+
+      if (node.strokes) {
+        for (const stroke of node.strokes) {
+          if (stroke.visible !== false && stroke.color) {
+            const hex = this.rgbToHex(stroke.color);
+            record(hex, 'stroke');
+          }
+        }
+      }
+
+      if (node.style?.fills) {
+        for (const fill of node.style.fills) {
+          if (fill.color) {
+            const hex = this.rgbToHex(fill.color);
+            record(hex, 'text');
+          }
+        }
+      }
+
+      if (node.backgroundColor) {
+        const hex = this.rgbToHex(node.backgroundColor);
+        if (node.backgroundColor.a > 0) {
+          record(hex, 'background');
+        }
+      }
+    }
+
+    if (styles?.colors) {
+      for (const style of styles.colors) {
+        const hex = this.rgbToHex(style.color);
+        record(hex, `style:${style.name}`);
+      }
+    }
+
+    return [...usageMap.values()].sort((a, b) => b.count - a.count);
+  }
+
+  private buildColorTokens(usages: ColorUsage[], styles?: FigmaStyles): ColorTokens {
     const primary: Record<string, string> = {};
     const secondary: Record<string, string> = {};
     const accent: Record<string, string> = {};
@@ -41,7 +132,6 @@ export class TokenExtractor {
     const warning: Record<string, string> = {};
     const error: Record<string, string> = {};
     const info: Record<string, string> = {};
-    const ecommerceColors: Record<string, string> = {};
 
     if (styles?.colors) {
       for (const style of styles.colors) {
@@ -57,35 +147,57 @@ export class TokenExtractor {
         else if (name.includes('warning') || name.includes('yellow') || name.includes('amber')) warning[shade] = hex;
         else if (name.includes('error') || name.includes('danger') || name.includes('red')) error[shade] = hex;
         else if (name.includes('info') || name.includes('blue')) info[shade] = hex;
-
-        if (name.includes('sale') || name.includes('discount')) ecommerceColors['sale'] = hex;
-        if (name.includes('stock') || name.includes('in-stock')) ecommerceColors['inStock'] = hex;
-        if (name.includes('out-of-stock')) ecommerceColors['outOfStock'] = hex;
-        if (name.includes('rating') || name.includes('star')) ecommerceColors['rating'] = hex;
       }
     }
 
-    // Fill missing scales
-    this.fillColorScale(primary, '#3b82f6');
-    this.fillColorScale(secondary, '#8b5cf6');
-    this.fillColorScale(accent, '#f59e0b');
-    this.fillColorScale(neutral, '#6b7280');
-    this.fillColorScale(success, '#10b981');
-    this.fillColorScale(warning, '#f59e0b');
-    this.fillColorScale(error, '#ef4444');
-    this.fillColorScale(info, '#3b82f6');
+    const sortedByUsage = usages.filter(u => u.count > 0);
+
+    if (!primary['500'] && sortedByUsage.length > 0) {
+      const mostUsed = sortedByUsage[0].hex;
+      this.fillColorScale(primary, mostUsed);
+    } else {
+      this.fillColorScale(primary, primary['500'] || '#3b82f6');
+    }
+
+    if (!secondary['500'] && sortedByUsage.length > 1) {
+      this.fillColorScale(secondary, sortedByUsage[1].hex);
+    } else {
+      this.fillColorScale(secondary, secondary['500'] || '#8b5cf6');
+    }
+
+    if (!accent['500'] && sortedByUsage.length > 2) {
+      this.fillColorScale(accent, sortedByUsage[2].hex);
+    } else {
+      this.fillColorScale(accent, accent['500'] || '#f59e0b');
+    }
+
+    this.fillColorScale(neutral, neutral['500'] || '#6b7280');
+    this.fillColorScale(success, success['500'] || '#10b981');
+    this.fillColorScale(warning, warning['500'] || '#f59e0b');
+    this.fillColorScale(error, error['500'] || '#ef4444');
+    this.fillColorScale(info, info['500'] || '#3b82f6');
+
+    const textPrimaryColor = usages.find(u =>
+      u.contexts.includes('text') && !u.hex.startsWith('#fff') && !u.hex.startsWith('#000'))?.hex
+      ?? neutral['900'] ?? '#111827';
+    const textSecondaryColor = usages.find(u =>
+      u.contexts.includes('text') && u.hex !== textPrimaryColor)?.hex
+      ?? neutral['500'] ?? '#6b7280';
+    const bgColor = usages.find(u =>
+      u.contexts.includes('background') || u.contexts.includes('fill'))?.hex
+      ?? neutral['50'] ?? '#f9fafb';
 
     return {
       primary, secondary, accent, neutral,
       success, warning, error, info,
       background: {
-        body: neutral['50'] ?? '#f9fafb',
+        body: bgColor,
         surface: '#ffffff',
         overlay: 'rgba(0, 0, 0, 0.5)',
       },
       text: {
-        primary: neutral['900'] ?? '#111827',
-        secondary: neutral['500'] ?? '#6b7280',
+        primary: textPrimaryColor,
+        secondary: textSecondaryColor,
         disabled: neutral['300'] ?? '#d1d5db',
         inverse: '#ffffff',
       },
@@ -95,54 +207,57 @@ export class TokenExtractor {
         focus: primary['500'] ?? '#3b82f6',
       },
       ecommerce: {
-        sale: ecommerceColors['sale'] ?? '#ef4444',
-        newArrival: ecommerceColors['newArrival'] ?? '#10b981',
-        outOfStock: ecommerceColors['outOfStock'] ?? '#6b7280',
-        inStock: ecommerceColors['inStock'] ?? '#10b981',
+        sale: '#ef4444',
+        newArrival: '#10b981',
+        outOfStock: '#6b7280',
+        inStock: '#10b981',
         price: '#111827',
-        salePrice: ecommerceColors['salePrice'] ?? '#ef4444',
-        rating: ecommerceColors['rating'] ?? '#f59e0b',
-      } as ColorTokens['ecommerce'],
+        salePrice: '#ef4444',
+        rating: '#f59e0b',
+      },
     };
   }
 
-  private fillColorScale(scale: Record<string, string>, baseHex: string): void {
-    if (!scale['50']) scale['50'] = this.lighten(baseHex, 0.95);
-    if (!scale['100']) scale['100'] = this.lighten(baseHex, 0.9);
-    if (!scale['200']) scale['200'] = this.lighten(baseHex, 0.75);
-    if (!scale['300']) scale['300'] = this.lighten(baseHex, 0.6);
-    if (!scale['400']) scale['400'] = this.lighten(baseHex, 0.4);
-    if (!scale['500']) scale['500'] = baseHex;
-    if (!scale['600']) scale['600'] = this.darken(baseHex, 0.2);
-    if (!scale['700']) scale['700'] = this.darken(baseHex, 0.4);
-    if (!scale['800']) scale['800'] = this.darken(baseHex, 0.6);
-    if (!scale['900']) scale['900'] = this.darken(baseHex, 0.8);
+  // ── Font Scanning ──────────────────────────────────
+
+  private scanFontUsage(nodes: SceneNode[], styles?: FigmaStyles): FontUsage[] {
+    const usageMap = new Map<string, FontUsage>();
+
+    const record = (family: string, weight: number, size: number) => {
+      const key = `${family}:${weight}:${Math.round(size)}`;
+      const existing = usageMap.get(key);
+      if (existing) {
+        existing.count++;
+      } else {
+        usageMap.set(key, { family, weight, size, count: 1 });
+      }
+    };
+
+    for (const node of nodes) {
+      if (node.type === 'TEXT' && node.style) {
+        const s = node.style;
+        record(
+          s.fontFamily || 'Inter',
+          s.fontWeight || 400,
+          s.fontSize || 16,
+        );
+      }
+    }
+
+    if (styles?.textStyles) {
+      for (const style of styles.textStyles) {
+        record(
+          style.fontFamily || 'Inter',
+          style.fontWeight || 400,
+          style.fontSize || 16,
+        );
+      }
+    }
+
+    return [...usageMap.values()].sort((a, b) => b.count - a.count);
   }
 
-  private lighten(hex: string, amount: number): string {
-    const num = parseInt(hex.replace('#', ''), 16);
-    const r = Math.min(255, Math.round((num >> 16) + (255 - (num >> 16)) * amount));
-    const g = Math.min(255, Math.round(((num >> 8) & 0x00FF) + (255 - ((num >> 8) & 0x00FF)) * amount));
-    const b = Math.min(255, Math.round((num & 0x0000FF) + (255 - (num & 0x0000FF)) * amount));
-    return `#${(r << 16 | g << 8 | b).toString(16).padStart(6, '0')}`;
-  }
-
-  private darken(hex: string, amount: number): string {
-    const num = parseInt(hex.replace('#', ''), 16);
-    const r = Math.max(0, Math.round((num >> 16) * (1 - amount)));
-    const g = Math.max(0, Math.round(((num >> 8) & 0x00FF) * (1 - amount)));
-    const b = Math.max(0, Math.round((num & 0x0000FF) * (1 - amount)));
-    return `#${(r << 16 | g << 8 | b).toString(16).padStart(6, '0')}`;
-  }
-
-  private extractShade(name: string): string | null {
-    const match = name.match(/(\d{2,3})$/);
-    return match?.[1] ?? null;
-  }
-
-  // ── Typography ─────────────────────────────────────────
-
-  private extractTypography(_file: FigmaFile, styles?: FigmaStyles): TypographyTokens {
+  private buildTypographyTokens(fontUsages: FontUsage[], styles?: FigmaStyles): TypographyTokens {
     const textStyles: TypographyTokens['textStyles'] = {
       h1: this.makeTextStyle(48, 700, '1.2', '-0.02em'),
       h2: this.makeTextStyle(36, 700, '1.25', '-0.02em'),
@@ -165,7 +280,9 @@ export class TokenExtractor {
           fontFamily: style.fontFamily || 'Inter',
           fontSize: `${style.fontSize}px`,
           fontWeight: style.fontWeight,
-          lineHeight: style.lineHeight ? `${style.lineHeight}px` : '1.5',
+          lineHeight: typeof style.lineHeight === 'number'
+            ? `${style.lineHeight}px`
+            : style.lineHeight?.value ? `${style.lineHeight.value}${style.lineHeight.unit === 'PIXELS' ? 'px' : '%'}` : '1.5',
           letterSpacing: style.letterSpacing ? `${style.letterSpacing}px` : '0',
         };
 
@@ -179,12 +296,25 @@ export class TokenExtractor {
         else if (name.includes('caption') || name.includes('small')) textStyles.caption = entry;
         else if (name.includes('button') || name.includes('btn')) textStyles.button = entry;
       }
+    } else if (fontUsages.length > 0) {
+      const largest = fontUsages[0];
+      const h1Size = largest.size >= 36 ? largest.size : Math.min(largest.size * 2, 72);
+      textStyles.h1 = this.makeTextStyle(
+        h1Size, largest.weight, '1.2', '-0.02em'
+      );
+      textStyles.body = this.makeTextStyle(
+        this.getMostCommonSize(fontUsages.flatMap(f => [f.size])),
+        this.getMostCommonWeight(fontUsages.flatMap(f => [f.weight])),
+        '1.6', '0'
+      );
     }
+
+    const mainFont = fontUsages.length > 0 ? fontUsages[0].family : 'Inter';
 
     return {
       fontFamilies: {
-        heading: { name: 'Inter', weights: [300, 400, 500, 600, 700], fallback: '-apple-system, system-ui, sans-serif' },
-        body: { name: 'Inter', weights: [300, 400, 500, 600, 700], fallback: '-apple-system, system-ui, sans-serif' },
+        heading: { name: mainFont, weights: [300, 400, 500, 600, 700], fallback: '-apple-system, system-ui, sans-serif' },
+        body: { name: mainFont, weights: [300, 400, 500, 600, 700], fallback: '-apple-system, system-ui, sans-serif' },
       },
       fontSizes: {
         xs: '0.75rem', sm: '0.875rem', base: '1rem', lg: '1.125rem',
@@ -207,21 +337,35 @@ export class TokenExtractor {
     };
   }
 
-  private makeTextStyle(fontSize: number, fontWeight: number, lineHeight: string, letterSpacing: string) {
-    return {
-      fontFamily: 'Inter',
-      fontSize: `${fontSize}px`,
-      fontWeight,
-      lineHeight,
-      letterSpacing,
-    };
+  // ── Spacing Scanning ────────────────────────────────
+
+  private scanSpacingValues(nodes: SceneNode[]): number[] {
+    const values: number[] = [];
+    for (const node of nodes) {
+      if (node.paddingTop) values.push(node.paddingTop);
+      if (node.paddingRight) values.push(node.paddingRight);
+      if (node.paddingBottom) values.push(node.paddingBottom);
+      if (node.paddingLeft) values.push(node.paddingLeft);
+      if (node.itemSpacing) values.push(node.itemSpacing);
+    }
+    return [...new Set(values)].sort((a, b) => a - b);
   }
 
-  // ── Spacing ────────────────────────────────────────────
-
-  private generateSpacingScale(): Record<string, string> {
-    return {
+  private buildSpacingScale(figmaValues: number[]): Record<string, string> {
+    const scale: Record<string, string> = {
       '0': '0', 'px': '1px', '0.5': '0.125rem', '1': '0.25rem',
+    };
+
+    if (figmaValues.length > 0) {
+      for (const val of figmaValues) {
+        const rem = val / 16;
+        const key = rem <= 1 ? `${rem}` : `${Math.round(rem * 4) / 4}`;
+        scale[key] = `${rem}rem`;
+      }
+    }
+
+    return {
+      ...scale,
       '1.5': '0.375rem', '2': '0.5rem', '2.5': '0.625rem', '3': '0.75rem',
       '3.5': '0.875rem', '4': '1rem', '5': '1.25rem', '6': '1.5rem',
       '7': '1.75rem', '8': '2rem', '9': '2.25rem', '10': '2.5rem',
@@ -233,34 +377,74 @@ export class TokenExtractor {
     };
   }
 
-  private generateSizingScale(): Record<string, string> {
-    const sizing = this.generateSpacingScale();
+  // ── Border Radius Scanning ──────────────────────────
+
+  private scanBorderRadii(nodes: SceneNode[]): number[] {
+    const values: number[] = [];
+    for (const node of nodes) {
+      if (node.cornerRadius && typeof node.cornerRadius === 'number') {
+        values.push(node.cornerRadius);
+      }
+      if (node.type === 'RECTANGLE' || node.type === 'FRAME' || node.type === 'COMPONENT') {
+        if (node.cornerRadius && typeof node.cornerRadius === 'number') {
+          values.push(node.cornerRadius);
+        }
+      }
+    }
+    return [...new Set(values)].sort((a, b) => a - b);
+  }
+
+  private buildBorderRadii(figmaValues: number[]): Record<string, string> {
+    const radii: Record<string, string> = {
+      none: '0', sm: '0.125rem', default: '0.25rem',
+    };
+
+    if (figmaValues.length > 0) {
+      for (const val of figmaValues) {
+        const rem = val / 16;
+        const key = rem <= 0.5 ? 'sm' : rem <= 1 ? 'md' : rem <= 1.5 ? 'lg' : rem <= 2 ? 'xl' : `${val}px`;
+        if (!radii[key]) radii[key] = `${rem}rem`;
+      }
+    }
+
     return {
-      ...sizing,
-      auto: 'auto',
-      full: '100%',
-      screen: '100vh',
-      min: 'min-content',
-      max: 'max-content',
-      fit: 'fit-content',
+      ...radii,
+      md: radii['md'] || '0.375rem',
+      lg: radii['lg'] || '0.5rem',
+      xl: radii['xl'] || '0.75rem',
+      '2xl': '1rem', '3xl': '1.5rem', full: '9999px',
     };
   }
 
-  // ── Border Radius ─────────────────────────────────────
+  // ── Shadows from Effects ────────────────────────────
 
-  private generateBorderRadii(): Record<string, string> {
+  private generateShadows(nodes: SceneNode[], _styles?: FigmaStyles): Record<string, string> {
+    const shadows: Record<string, string> = { none: 'none' };
+
+    for (const node of nodes) {
+      if (node.effects) {
+        for (const effect of node.effects) {
+          if (effect.visible !== false && (effect.type === 'DROP_SHADOW' || effect.type === 'INNER_SHADOW')) {
+            const offsetX = effect.offset?.x ?? 0;
+            const offsetY = effect.offset?.y ?? 0;
+            const blur = effect.radius ?? 0;
+            const color = effect.color ? this.rgbaToString(effect.color) : 'rgba(0,0,0,0.1)';
+            const spread = effect.spread ?? 0;
+            const prefix = effect.type === 'INNER_SHADOW' ? 'inset ' : '';
+            const cssShadow = `${prefix}${offsetX}px ${offsetY}px ${blur}px ${spread}px ${color}`;
+
+            if (!shadows['from-figma']) {
+              shadows['from-figma'] = cssShadow;
+            } else {
+              shadows[`shadow-${node.id.slice(-4)}`] = cssShadow;
+            }
+          }
+        }
+      }
+    }
+
     return {
-      none: '0', sm: '0.125rem', default: '0.25rem', md: '0.375rem',
-      lg: '0.5rem', xl: '0.75rem', '2xl': '1rem', '3xl': '1.5rem',
-      full: '9999px',
-    };
-  }
-
-  // ── Shadows ────────────────────────────────────────────
-
-  private generateShadows(_styles?: FigmaStyles): Record<string, string> {
-    return {
-      none: 'none',
+      ...shadows,
       sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
       default: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
       md: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
@@ -275,7 +459,87 @@ export class TokenExtractor {
     };
   }
 
-  // ── Borders ────────────────────────────────────────────
+  // ── Helper Methods ──────────────────────────────────
+
+  private rgbToHex(color: Color): string {
+    const r = Math.round(color.r * 255);
+    const g = Math.round(color.g * 255);
+    const b = Math.round(color.b * 255);
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  }
+
+  private rgbaToString(color: Color): string {
+    return `rgba(${Math.round(color.r * 255)}, ${Math.round(color.g * 255)}, ${Math.round(color.b * 255)}, ${color.a})`;
+  }
+
+  private fillColorScale(scale: Record<string, string>, baseHex: string): void {
+    if (!scale['50']) scale['50'] = this.lighten(baseHex, 0.95);
+    if (!scale['100']) scale['100'] = this.lighten(baseHex, 0.9);
+    if (!scale['200']) scale['200'] = this.lighten(baseHex, 0.75);
+    if (!scale['300']) scale['300'] = this.lighten(baseHex, 0.6);
+    if (!scale['400']) scale['400'] = this.lighten(baseHex, 0.4);
+    if (!scale['500']) scale['500'] = baseHex;
+    if (!scale['600']) scale['600'] = this.darken(baseHex, 0.2);
+    if (!scale['700']) scale['700'] = this.darken(baseHex, 0.4);
+    if (!scale['800']) scale['800'] = this.darken(baseHex, 0.6);
+    if (!scale['900']) scale['900'] = this.darken(baseHex, 0.8);
+  }
+
+  private lighten(hex: string, amount: number): string {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const r = Math.min(255, Math.round((num >> 16) + (255 - (num >> 16)) * amount));
+    const g = Math.min(255, Math.round(((num >> 8) & 0x00FF) + (255 - ((num >> 8) & 0x00FF)) * amount));
+    const b = Math.min(255, Math.round((num & 0x0000FF) + (255 - (num & 0x0000FF)) * amount));
+    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+  }
+
+  private darken(hex: string, amount: number): string {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const r = Math.max(0, Math.round((num >> 16) * (1 - amount)));
+    const g = Math.max(0, Math.round(((num >> 8) & 0x00FF) * (1 - amount)));
+    const b = Math.max(0, Math.round((num & 0x0000FF) * (1 - amount)));
+    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+  }
+
+  private extractShade(name: string): string | null {
+    const match = name.match(/(\d{2,3})$/);
+    return match?.[1] ?? null;
+  }
+
+  private makeTextStyle(fontSize: number, fontWeight: number, lineHeight: string, letterSpacing: string) {
+    return {
+      fontFamily: 'Inter',
+      fontSize: `${fontSize}px`,
+      fontWeight,
+      lineHeight,
+      letterSpacing,
+    };
+  }
+
+  private getMostCommonSize(sizes: number[]): number {
+    if (sizes.length === 0) return 16;
+    const freq = new Map<number, number>();
+    for (const s of sizes) freq.set(s, (freq.get(s) ?? 0) + 1);
+    return [...freq.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  }
+
+  private getMostCommonWeight(weights: number[]): number {
+    if (weights.length === 0) return 400;
+    const freq = new Map<number, number>();
+    for (const w of weights) freq.set(w, (freq.get(w) ?? 0) + 1);
+    return [...freq.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  }
+
+  private buildSizingScale(): Record<string, string> {
+    return {
+      '0': '0', 'px': '1px', '0.5': '0.125rem', '1': '0.25rem',
+      '2': '0.5rem', '3': '0.75rem', '4': '1rem', '5': '1.25rem',
+      '6': '1.5rem', '8': '2rem', '10': '2.5rem', '12': '3rem',
+      '14': '3.5rem', '16': '4rem', '20': '5rem', '24': '6rem',
+      auto: 'auto', full: '100%', screen: '100vh', min: 'min-content',
+      max: 'max-content', fit: 'fit-content',
+    };
+  }
 
   private generateBorderTokens(): BorderTokens {
     return {
@@ -283,8 +547,6 @@ export class TokenExtractor {
       styles: { solid: 'solid', dashed: 'dashed', dotted: 'dotted', double: 'double', none: 'none' },
     };
   }
-
-  // ── Transitions ────────────────────────────────────────
 
   private generateTransitions(): TransitionTokens {
     return {
@@ -296,15 +558,11 @@ export class TokenExtractor {
     };
   }
 
-  // ── Breakpoints ────────────────────────────────────────
-
   private generateBreakpoints(): Record<string, string> {
     return {
       sm: '640px', md: '768px', lg: '1024px', xl: '1280px', '2xl': '1536px',
     };
   }
-
-  // ── Z-Index ────────────────────────────────────────────
 
   private generateZIndex(): Record<string, number | string> {
     return { '0': 0, '10': 10, '20': 20, '30': 30, '40': 40, '50': 50, auto: 'auto' };

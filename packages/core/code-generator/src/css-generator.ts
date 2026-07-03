@@ -908,7 +908,7 @@ textarea.form-control {
     return vars.join('\n  ');
   }
 
-  private generateTransitionVariables(tokens: ExtractedTypes): string {
+  private generateTransitionVariables(tokens: Pick<ExtractedTokens, 'transitions'>): string {
     const vars: string[] = [];
     for (const [key, val] of Object.entries(tokens.transitions.duration)) {
       vars.push(`--duration-${key}: ${val};`);
@@ -1011,6 +1011,52 @@ textarea.form-control {
   box-shadow: var(--shadow-xl);
 }
 
+/* ============================================
+   CSS Grid Utilities (from layout engine)
+   ============================================ */
+
+.grid {
+  display: grid;
+}
+
+.grid--auto-fit {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.grid--auto-fill {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.grid--2 { grid-template-columns: repeat(2, 1fr); }
+.grid--3 { grid-template-columns: repeat(3, 1fr); }
+.grid--4 { grid-template-columns: repeat(4, 1fr); }
+.grid--5 { grid-template-columns: repeat(5, 1fr); }
+.grid--6 { grid-template-columns: repeat(6, 1fr); }
+
+.grid--gap-sm { gap: var(--spacing-4); }
+.grid--gap-md { gap: var(--spacing-6); }
+.grid--gap-lg { gap: var(--spacing-8); }
+
+@media (max-width: 768px) {
+  .grid--2,
+  .grid--3,
+  .grid--4,
+  .grid--5,
+  .grid--6 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .grid--2,
+  .grid--3,
+  .grid--4,
+  .grid--5,
+  .grid--6 {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Tooltip */
 .tooltip {
   position: relative;
@@ -1038,5 +1084,3 @@ textarea.form-control {
 `;
   }
 }
-
-type ExtractedTypes = Pick<ExtractedTokens, 'transitions'>;

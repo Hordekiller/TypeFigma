@@ -10,11 +10,17 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@typefigma/analyzer": "*",
+    "@typefigma/code-generator": "*",
+    "@typefigma/elementor-mapper": "*",
     "@typefigma/theme-builder": "*",
+    "@typefigma/validator": "*",
     "express": "^4.19.0",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "archiver": "^7.0.0"
   },
   "devDependencies": {
+    "@types/archiver": "^6.0.0",
     "@types/express": "^4.17.21",
     "@types/cors": "^2.8.17",
     "typescript": "^5.5.0"

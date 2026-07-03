@@ -1,0 +1,197 @@
+{
+  "title": "Shop",
+  "type": "product-archive",
+  "content": [
+    {
+      "id": "pc-product-card_1_ee11e8e4",
+      "elType": "container",
+      "settings": {
+        "content_width": "boxed",
+        "flex_direction": "column",
+        "background_background": "classic",
+        "background_color": "#FFFFFF",
+        "border_radius": {
+          "size": 12,
+          "unit": "px"
+        },
+        "border_border": "solid",
+        "border_width": {
+          "size": 1,
+          "unit": "px"
+        },
+        "border_color": "#e5e5e5",
+        "box_shadow_box_shadow_type": "preset1",
+        "box_shadow_box_shadow": "0 1px 3px 0 rgb(0 0 0 / 0.1)",
+        "hover_box_shadow_box_shadow_type": "preset3",
+        "hover_box_shadow_box_shadow": "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+        "margin": {
+          "top": 0,
+          "right": 0,
+          "bottom": 20,
+          "left": 0,
+          "unit": "px"
+        },
+        "overflow": "hidden"
+      },
+      "elements": [
+        {
+          "id": "pc-image-wrap_d917f3b3",
+          "elType": "container",
+          "settings": {
+            "content_width": "boxed",
+            "flex_direction": "column",
+            "position": "relative",
+            "overflow": "hidden"
+          },
+          "elements": [
+            {
+              "id": "image_612c71df",
+              "elType": "widget",
+              "widgetType": "image",
+              "settings": {
+                "image": {
+                  "url": "",
+                  "id": ""
+                },
+                "__dynamic__": {
+                  "image": "[elementor-tag id=\"\" name=\"featured-image\" settings=\"\"]"
+                },
+                "hover_animation": "zoom",
+                "image_border_radius": {
+                  "size": 8,
+                  "unit": "px",
+                  "top": 8,
+                  "right": 8,
+                  "bottom": 0,
+                  "left": 0
+                }
+              }
+            },
+            {
+              "id": "text-editor_9005b28a",
+              "elType": "widget",
+              "widgetType": "text-editor",
+              "settings": {
+                "editor": "<span style=\"background:#ef4444;color:white;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:600\">Sale!</span>",
+                "position": "absolute",
+                "top": {
+                  "size": 8,
+                  "unit": "px"
+                },
+                "right": {
+                  "size": 8,
+                  "unit": "px"
+                },
+                "z_index": 10
+              }
+            }
+          ]
+        },
+        {
+          "id": "pc-content_24c1b0ee",
+          "elType": "container",
+          "settings": {
+            "content_width": "boxed",
+            "flex_direction": "column",
+            "gap": {
+              "size": 8,
+              "unit": "px"
+            },
+            "padding": {
+              "top": 16,
+              "right": 16,
+              "bottom": 16,
+              "left": 16,
+              "unit": "px"
+            }
+          },
+          "elements": [
+            {
+              "id": "heading_d7572aee",
+              "elType": "widget",
+              "widgetType": "heading",
+              "settings": {
+                "title": "",
+                "__dynamic__": {
+                  "link": "[elementor-tag id=\"\" name=\"internal-url\" settings=\"\"]"
+                },
+                "link": {
+                  "url": ""
+                },
+                "header_size": "h3",
+                "title_color": "#171717",
+                "typography_typography": "custom",
+                "font_weight": "600",
+                "font_size": {
+                  "size": 20,
+                  "unit": "px"
+                }
+              }
+            },
+            {
+              "id": "star-rating_a89877e9",
+              "elType": "widget",
+              "widgetType": "star-rating",
+              "settings": {
+                "rating_scale": 5,
+                "rating_size": {
+                  "size": 16,
+                  "unit": "px"
+                },
+                "rating_color": "#f59e0b",
+                "rating_unmarked_color": "#d1d5db"
+              }
+            },
+            {
+              "id": "text-editor_d212e652",
+              "elType": "widget",
+              "widgetType": "text-editor",
+              "settings": {
+                "editor": "",
+                "__dynamic__": {
+                  "editor": "[elementor-tag id=\"\" name=\"post-excerpt\" settings=\"\"]"
+                },
+                "title_color": "#737373",
+                "typography_typography": "custom",
+                "font_size": {
+                  "size": 14,
+                  "unit": "px"
+                }
+              }
+            },
+            {
+              "id": "text-editor_f543966b",
+              "elType": "widget",
+              "widgetType": "text-editor",
+              "settings": {
+                "editor": "<span style=\"font-size:1.25rem;font-weight:700;color:#171717\"></span>",
+                "__dynamic__": {
+                  "editor": "[elementor-tag id=\"\" name=\"product-price\" settings=\"\"]"
+                }
+              }
+            },
+            {
+              "id": "btn_3463f4e5",
+              "elType": "widget",
+              "widgetType": "button",
+              "settings": {
+                "text": "Add to Cart",
+                "icon": "fa fa-shopping-cart",
+                "icon_position": "left",
+                "button_background_color": "#3b82f6",
+                "button_background_hover_color": "#2563eb",
+                "button_text_color": "#FFFFFF",
+                "button_border_radius": {
+                  "size": 4,
+                  "unit": "px"
+                },
+                "align": "center",
+                "hover_animation": "grow"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

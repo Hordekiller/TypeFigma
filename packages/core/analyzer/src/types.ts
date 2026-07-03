@@ -1,4 +1,5 @@
 import type { SceneNode } from '@typefigma/figma-client';
+import type { ExtractedContent } from './content-extractor.js';
 
 export type ProjectType = 'ecommerce' | 'corporate' | 'blog' | 'portfolio' | 'landing' | 'saas';
 
@@ -31,13 +32,15 @@ export interface Page {
 export interface FigmaAnalysis {
   projectMeta: {
     figmaUrl: string;
-    fileName?: string;
-    lastModified?: string;
+    fileName: string;
+    lastModified: string;
   };
   projectType: ProjectTypeDetection;
   pages: Page[];
   components: ComponentClassification;
   designTokens: ExtractedTokens;
+  content: ExtractedContent;
+  designSystem?: import('./variable-extractor.js').DesignSystem;
 }
 
 export interface ComponentClassification {
@@ -82,6 +85,7 @@ export interface HeaderComponent {
 export interface FooterComponent {
   id: string;
   figmaNodeId: string;
+  name: string;
   confidence: number;
   columns: number;
   hasSocial: boolean;
@@ -100,6 +104,7 @@ export interface NavigationComponent {
 export interface HeroComponent {
   id: string;
   figmaNodeId: string;
+  name: string;
   confidence: number;
   layout: 'fullwidth' | 'centered' | 'split';
   hasVideo: boolean;

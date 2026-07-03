@@ -1,0 +1,280 @@
+{
+  "title": "Generated Footer",
+  "type": "footer",
+  "content": [
+    {
+      "id": "footer_78181d83",
+      "elType": "container",
+      "settings": {
+        "content_width": "full",
+        "flex_direction": "column",
+        "padding": {
+          "top": 80,
+          "right": 40,
+          "bottom": 40,
+          "left": 40,
+          "unit": "px"
+        },
+        "padding_tablet": {
+          "top": 60,
+          "right": 20,
+          "bottom": 30,
+          "left": 20,
+          "unit": "px"
+        },
+        "padding_mobile": {
+          "top": 40,
+          "right": 16,
+          "bottom": 20,
+          "left": 16,
+          "unit": "px"
+        },
+        "background_background": "classic",
+        "background_color": "#111827"
+      },
+      "elements": [
+        {
+          "id": "footer-grid_4181cc40",
+          "elType": "container",
+          "settings": {
+            "content_width": "boxed",
+            "flex_direction": "row",
+            "gap": {
+              "size": 40,
+              "unit": "px"
+            },
+            "flex_wrap": "wrap"
+          },
+          "elements": [
+            {
+              "id": "footer-col-1_49ce65f8",
+              "elType": "container",
+              "settings": {
+                "content_width": "boxed",
+                "flex_direction": "column",
+                "gap": {
+                  "size": 12,
+                  "unit": "px"
+                }
+              },
+              "elements": [
+                {
+                  "id": "heading_6121f0af",
+                  "elType": "widget",
+                  "widgetType": "heading",
+                  "settings": {
+                    "title": "Column 1",
+                    "header_size": "h4",
+                    "title_color": "#FFFFFF",
+                    "typography_typography": "custom",
+                    "font_weight": "600"
+                  }
+                },
+                {
+                  "id": "wp-widget-pages_e0fec7c1",
+                  "elType": "widget",
+                  "widgetType": "wp-widget-pages",
+                  "settings": {
+                    "title": ""
+                  }
+                }
+              ]
+            },
+            {
+              "id": "footer-col-2_b46b42f0",
+              "elType": "container",
+              "settings": {
+                "content_width": "boxed",
+                "flex_direction": "column",
+                "gap": {
+                  "size": 12,
+                  "unit": "px"
+                }
+              },
+              "elements": [
+                {
+                  "id": "heading_9704253b",
+                  "elType": "widget",
+                  "widgetType": "heading",
+                  "settings": {
+                    "title": "Column 2",
+                    "header_size": "h4",
+                    "title_color": "#FFFFFF",
+                    "typography_typography": "custom",
+                    "font_weight": "600"
+                  }
+                },
+                {
+                  "id": "wp-widget-pages_599252c2",
+                  "elType": "widget",
+                  "widgetType": "wp-widget-pages",
+                  "settings": {
+                    "title": ""
+                  }
+                }
+              ]
+            },
+            {
+              "id": "footer-col-3_87d82032",
+              "elType": "container",
+              "settings": {
+                "content_width": "boxed",
+                "flex_direction": "column",
+                "gap": {
+                  "size": 12,
+                  "unit": "px"
+                }
+              },
+              "elements": [
+                {
+                  "id": "heading_951162f0",
+                  "elType": "widget",
+                  "widgetType": "heading",
+                  "settings": {
+                    "title": "Column 3",
+                    "header_size": "h4",
+                    "title_color": "#FFFFFF",
+                    "typography_typography": "custom",
+                    "font_weight": "600"
+                  }
+                },
+                {
+                  "id": "wp-widget-pages_fc36c3ea",
+                  "elType": "widget",
+                  "widgetType": "wp-widget-pages",
+                  "settings": {
+                    "title": ""
+                  }
+                }
+              ]
+            },
+            {
+              "id": "footer-col-4_9010f88a",
+              "elType": "container",
+              "settings": {
+                "content_width": "boxed",
+                "flex_direction": "column",
+                "gap": {
+                  "size": 12,
+                  "unit": "px"
+                }
+              },
+              "elements": [
+                {
+                  "id": "heading_1b5b2bd2",
+                  "elType": "widget",
+                  "widgetType": "heading",
+                  "settings": {
+                    "title": "Column 4",
+                    "header_size": "h4",
+                    "title_color": "#FFFFFF",
+                    "typography_typography": "custom",
+                    "font_weight": "600"
+                  }
+                },
+                {
+                  "id": "wp-widget-pages_4aae0a08",
+                  "elType": "widget",
+                  "widgetType": "wp-widget-pages",
+                  "settings": {
+                    "title": ""
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "footer-newsletter_26d5573f",
+          "elType": "container",
+          "settings": {
+            "content_width": "boxed",
+            "flex_direction": "row",
+            "justify_content": "center",
+            "margin": {
+              "top": 32,
+              "right": 0,
+              "bottom": 0,
+              "left": 0,
+              "unit": "px"
+            }
+          },
+          "elements": [
+            {
+              "id": "form_f7afbd99",
+              "elType": "widget",
+              "widgetType": "form",
+              "settings": {
+                "form_name": "newsletter",
+                "button_text": "Subscribe",
+                "button_background_color": "#3b82f6",
+                "fields": [
+                  {
+                    "type": "email",
+                    "placeholder": "Your email",
+                    "required": true
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "footer-bottom_cc00ecb3",
+          "elType": "container",
+          "settings": {
+            "content_width": "boxed",
+            "flex_direction": "row",
+            "justify_content": "center",
+            "margin": {
+              "top": 40,
+              "right": 0,
+              "bottom": 0,
+              "left": 0,
+              "unit": "px"
+            },
+            "padding": {
+              "top": 24,
+              "right": 0,
+              "bottom": 0,
+              "left": 0,
+              "unit": "px"
+            },
+            "border_border": "solid",
+            "border_width": {
+              "size": 1,
+              "unit": "px"
+            },
+            "border_color": "rgba(255,255,255,0.1)"
+          },
+          "elements": [
+            {
+              "id": "text-editor_6cd2540a",
+              "elType": "widget",
+              "widgetType": "text-editor",
+              "settings": {
+                "title": "<p>&copy; 2026 <span></span>. All rights reserved.</p>",
+                "__dynamic__": {
+                  "title": "[elementor-tag id=\"\" name=\"site-name\" settings=\"\"]"
+                },
+                "align": "center",
+                "title_color": "rgba(255,255,255,0.6)",
+                "typography_typography": "custom",
+                "font_size": {
+                  "size": 14,
+                  "unit": "px"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "condition": [
+    {
+      "name": "include",
+      "sub_name": "entire_site"
+    }
+  ]
+}

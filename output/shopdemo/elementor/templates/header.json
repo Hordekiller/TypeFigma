@@ -1,0 +1,117 @@
+{
+  "title": "Generated Header",
+  "type": "header",
+  "content": [
+    {
+      "id": "header_aac06ad6",
+      "elType": "container",
+      "settings": {
+        "content_width": "full",
+        "flex_direction": "row",
+        "justify_content": "space-between",
+        "align_items": "center",
+        "padding": {
+          "top": 16,
+          "right": 40,
+          "bottom": 16,
+          "left": 40,
+          "unit": "px"
+        },
+        "padding_tablet": {
+          "top": 12,
+          "right": 20,
+          "bottom": 12,
+          "left": 20,
+          "unit": "px"
+        },
+        "padding_mobile": {
+          "top": 10,
+          "right": 16,
+          "bottom": 10,
+          "left": 16,
+          "unit": "px"
+        },
+        "background_background": "classic",
+        "background_color": "#FFFFFF",
+        "position": "sticky",
+        "top": {
+          "size": 0,
+          "unit": "px"
+        },
+        "z_index": 100,
+        "entrance_animation": "fadeInDown"
+      },
+      "elements": [
+        {
+          "id": "image_ce237511",
+          "elType": "widget",
+          "widgetType": "image",
+          "settings": {
+            "image": {
+              "url": "",
+              "id": ""
+            },
+            "__dynamic__": {
+              "image": "[elementor-tag id=\"\" name=\"site-logo\" settings=\"\"]"
+            },
+            "width": {
+              "size": 150,
+              "unit": "px"
+            },
+            "align": "left"
+          }
+        },
+        {
+          "id": "nav-menu_d0755a7f",
+          "elType": "widget",
+          "widgetType": "nav-menu",
+          "settings": {
+            "menu": "primary",
+            "layout": "horizontal",
+            "align": "center",
+            "pointer": "underline",
+            "animation": "fade",
+            "breakpoint": "tablet"
+          }
+        },
+        {
+          "id": "search-form_d48528dc",
+          "elType": "widget",
+          "widgetType": "search-form",
+          "settings": {
+            "skin": "classic",
+            "input_size": "sm",
+            "button_type": "icon",
+            "placeholder": "Search..."
+          }
+        },
+        {
+          "id": "btn_4dbaf8ff",
+          "elType": "widget",
+          "widgetType": "button",
+          "settings": {
+            "text": "Get Started",
+            "link": {
+              "url": "#"
+            },
+            "size": "sm",
+            "button_background_color": "#3b82f6",
+            "button_background_hover_color": "#2563eb",
+            "button_text_color": "#FFFFFF",
+            "button_border_radius": {
+              "size": 8,
+              "unit": "px"
+            },
+            "hover_animation": "grow"
+          }
+        }
+      ]
+    }
+  ],
+  "condition": [
+    {
+      "name": "include",
+      "sub_name": "entire_site"
+    }
+  ]
+}

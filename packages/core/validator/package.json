@@ -10,6 +10,9 @@
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@typefigma/theme-builder": "*"
+  },
   "devDependencies": {
     "typescript": "^5.5.0"
   }

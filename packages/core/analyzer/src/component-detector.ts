@@ -2,6 +2,7 @@ import type {
   SceneNode,
   FigmaFile,
 } from '@typefigma/figma-client';
+import { LayoutEngine, type LayoutCSS } from './layout-engine.js';
 import type {
   ComponentClassification,
   ProjectTypeDetection,
@@ -20,32 +21,127 @@ import type {
   PostCardComponent,
   PostDetailComponent,
   FormComponent,
-
   SectionComponent,
   ContainerComponent,
 } from './types.js';
 
+interface NodeAnalysis {
+  node: SceneNode;
+  textCount: number;
+  imageCount: number;
+  shapeCount: number;
+  frameCount: number;
+  buttonCount: number;
+  inputCount: number;
+  linkCount: number;
+  iconCount: number;
+  totalChildren: number;
+  depth: number;
+  hasAutoLayout: boolean;
+  isHorizontal: boolean;
+  isVertical: boolean;
+  hasGrid: boolean;
+  avgChildWidth: number;
+  avgChildHeight: number;
+  childTypes: Map<string, number>;
+  childNameWords: string[];
+  box?: { x: number; y: number; width: number; height: number };
+  layoutCss: LayoutCSS;
+}
+
 export class ComponentDetector {
+  private layoutEngine = new LayoutEngine();
+
   detect(file: FigmaFile): {
     projectType: ProjectTypeDetection;
     components: ComponentClassification;
   } {
     const allPages = file.document.children ?? [];
-    let allNodes: SceneNode[] = [];
+    const allNodes: SceneNode[] = [];
 
     for (const page of allPages) {
       if (page.children) {
-        allNodes = allNodes.concat(page.children);
+        allNodes.push(...page.children);
       }
     }
 
-    const components = this.classifyAll(allNodes);
+    const analyzed = allNodes.map(n => this.analyzeNode(n));
+    const components = this.classifyAll(allNodes, analyzed);
     const projectType = this.detectProjectType(allNodes, components);
 
     return { projectType, components };
   }
 
-  private classifyAll(nodes: SceneNode[]): ComponentClassification {
+  private analyzeNode(node: SceneNode, depth: number = 0): NodeAnalysis {
+    const children = node.children ?? [];
+    const box = node.absoluteBoundingBox;
+
+    let textCount = 0;
+    let imageCount = 0;
+    let shapeCount = 0;
+    let frameCount = 0;
+    let buttonCount = 0;
+    let inputCount = 0;
+    let linkCount = 0;
+    let iconCount = 0;
+    const childTypes = new Map<string, number>();
+    const childNameWords: string[] = [];
+
+    for (const child of children) {
+      childTypes.set(child.type, (childTypes.get(child.type) ?? 0) + 1);
+
+      const name = child.name.toLowerCase();
+      childNameWords.push(...name.split(/[\s_-]+/));
+
+      switch (child.type) {
+        case 'TEXT': textCount++; break;
+        case 'RECTANGLE':
+          if (child.fills?.some(f => f.type === 'IMAGE')) imageCount++;
+          else if (typeof child.cornerRadius === 'number' && child.cornerRadius > 0) buttonCount++;
+          else shapeCount++;
+          break;
+        case 'VECTOR': iconCount++; break;
+        case 'FRAME':
+        case 'COMPONENT':
+        case 'INSTANCE':
+          frameCount++;
+          if (name.includes('button') || name.includes('btn') || name.includes('cta')) buttonCount++;
+          if (name.includes('icon') || name.includes('svg')) iconCount++;
+          if (name.includes('image') || name.includes('photo') || name.includes('img')) imageCount++;
+          if (name.includes('input') || name.includes('field') || name.includes('search')) inputCount++;
+          if (name.includes('link') || name.includes('nav')) linkCount++;
+          break;
+      }
+    }
+
+    const avgChildWidth = children.length > 0 && box
+      ? children.reduce((s, c) => s + (c.absoluteBoundingBox?.width ?? 0), 0) / children.length
+      : 0;
+    const avgChildHeight = children.length > 0 && box
+      ? children.reduce((s, c) => s + (c.absoluteBoundingBox?.height ?? 0), 0) / children.length
+      : 0;
+
+    const layoutCss = this.layoutEngine.computeLayout(node).self;
+
+    return {
+      node,
+      textCount, imageCount, shapeCount, frameCount,
+      buttonCount, inputCount, linkCount, iconCount,
+      totalChildren: children.length,
+      depth,
+      hasAutoLayout: node.layoutMode !== undefined && node.layoutMode !== 'NONE',
+      isHorizontal: node.layoutMode === 'HORIZONTAL',
+      isVertical: node.layoutMode === 'VERTICAL',
+      hasGrid: false,
+      avgChildWidth, avgChildHeight,
+      childTypes,
+      childNameWords,
+      box: box ?? undefined,
+      layoutCss,
+    };
+  }
+
+  private classifyAll(nodes: SceneNode[], analyzed: NodeAnalysis[]): ComponentClassification {
     const all: ComponentClassification = {
       headers: [], footers: [], navigation: [],
       heroes: [], ctaSections: [], testimonials: [], galleries: [],
@@ -54,258 +150,247 @@ export class ComponentDetector {
       sections: [], containers: [], columns: [],
     };
 
-    for (const node of nodes) {
-      if (!node.absoluteBoundingBox) continue;
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      const analysis = analyzed[i];
+      if (!analysis.box) continue;
+
       const name = node.name.toLowerCase();
 
-      // Detect by type & position
-      if (this.isHeader(node, name)) {
-        all.headers.push(this.buildHeader(node, name));
-      }
-      if (this.isFooter(node, name)) {
-        all.footers.push(this.buildFooter(node, name));
-      }
-      if (this.isNavigation(node, name)) {
-        all.navigation.push(this.buildNavigation(node, name));
-      }
-      if (this.isHero(node, name)) {
-        all.heroes.push(this.buildHero(node, name));
-      }
-      if (this.isCTA(node, name)) {
-        all.ctaSections.push(this.buildCTA(node, name));
-      }
-      if (this.isTestimonial(node, name)) {
-        all.testimonials.push(this.buildTestimonial(node, name));
-      }
-      if (this.isGallery(node, name)) {
-        all.galleries.push(this.buildGallery(node, name));
-      }
-      if (this.isProductCard(node, name)) {
-        all.productCards.push(this.buildProductCard(node, name));
-      }
-      if (this.isProductDetail(node, name)) {
-        all.productDetails.push(this.buildProductDetail(node, name));
-      }
-      if (this.isCart(node, name)) {
-        all.cartComponents.push(this.buildCart(node, name));
-      }
-      if (this.isCheckout(node, name)) {
-        all.checkoutComponents.push(this.buildCheckout(node, name));
-      }
-      if (this.isPostCard(node, name)) {
-        all.postCards.push(this.buildPostCard(node, name));
-      }
-      if (this.isPostDetail(node, name)) {
-        all.postDetail.push(this.buildPostDetail(node, name));
-      }
-      if (this.isForm(node, name)) {
-        const form = this.buildForm(node, name);
-        if (form.type === 'search') {
+      const headerCheck = this.detectHeader(node, analysis, name);
+      if (headerCheck) { all.headers.push(headerCheck); continue; }
+
+      const footerCheck = this.detectFooter(node, analysis, name);
+      if (footerCheck) { all.footers.push(footerCheck); continue; }
+
+      const navCheck = this.detectNavigation(node, analysis, name);
+      if (navCheck) { all.navigation.push(navCheck); continue; }
+
+      const heroCheck = this.detectHero(node, analysis, name);
+      if (heroCheck) { all.heroes.push(heroCheck); continue; }
+
+      const productCardCheck = this.detectProductCard(node, analysis, name);
+      if (productCardCheck) { all.productCards.push(productCardCheck); continue; }
+
+      const productDetailCheck = this.detectProductDetail(node, analysis, name);
+      if (productDetailCheck) { all.productDetails.push(productDetailCheck); continue; }
+
+      const ctaCheck = this.detectCTA(node, analysis, name);
+      if (ctaCheck) { all.ctaSections.push(ctaCheck); continue; }
+
+      const testimonialCheck = this.detectTestimonial(node, analysis, name);
+      if (testimonialCheck) { all.testimonials.push(testimonialCheck); continue; }
+
+      const galleryCheck = this.detectGallery(node, analysis, name);
+      if (galleryCheck) { all.galleries.push(galleryCheck); continue; }
+
+      const cartCheck = this.detectCart(node, analysis, name);
+      if (cartCheck) { all.cartComponents.push(cartCheck); continue; }
+
+      const checkoutCheck = this.detectCheckout(node, analysis, name);
+      if (checkoutCheck) { all.checkoutComponents.push(checkoutCheck); continue; }
+
+      const postCardCheck = this.detectPostCard(node, analysis, name);
+      if (postCardCheck) { all.postCards.push(postCardCheck); continue; }
+
+      const postDetailCheck = this.detectPostDetail(node, analysis, name);
+      if (postDetailCheck) { all.postDetail.push(postDetailCheck); continue; }
+
+      const formCheck = this.detectForm(node, analysis, name);
+      if (formCheck) {
+        if (formCheck.type === 'search') {
           all.searchBars.push({
-            id: form.id, figmaNodeId: form.figmaNodeId,
+            id: formCheck.id, figmaNodeId: formCheck.figmaNodeId,
             type: 'inline', hasDropdown: false, hasCategories: false,
           });
-        } else if (form.type === 'newsletter') {
+        } else if (formCheck.type === 'newsletter') {
           all.newsletters.push({
-            id: form.id, figmaNodeId: form.figmaNodeId,
+            id: formCheck.id, figmaNodeId: formCheck.figmaNodeId,
             hasName: false, hasEmail: true, hasConsentCheckbox: false,
           });
         } else {
-          all.contactForms.push(form);
+          all.contactForms.push(formCheck);
         }
-      }
-      if (this.isContainer(node, name)) {
-        all.containers.push(this.buildContainer(node, name));
+        continue;
       }
 
-      // Everything is a section if it's a frame
-      if (node.type === 'FRAME' || node.type === 'COMPONENT') {
-        all.sections.push(this.buildSection(node, name));
+      const containerCheck = this.detectContainer(node, analysis, name);
+      if (containerCheck) {
+        all.containers.push(containerCheck);
+      }
+
+      if (node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'INSTANCE') {
+        all.sections.push(this.buildSection(node, name, analysis));
       }
     }
 
     return all;
   }
 
-  // ── Detection Helpers ──────────────────────────────────
+  // ── Structural Detection ────────────────────────────
 
-  private isHeader(_node: SceneNode, name: string): boolean {
-    const y = _node.absoluteBoundingBox?.y ?? 0;
-    return y < 100 && (/header|nav|menu|navbar|topbar/i.test(name) || name.includes('header'));
-  }
+  private detectHeader(node: SceneNode, analysis: NodeAnalysis, name: string): HeaderComponent | null {
+    const box = analysis.box!;
+    const isAtTop = box.y < 100;
+    const hasLogo = analysis.childNameWords.some(w => w.includes('logo') || w.includes('brand'));
+    const hasNav = analysis.childNameWords.some(w => w.includes('nav') || w.includes('menu'));
+    const hasCTA = analysis.childNameWords.some(w => w.includes('cta') || w.includes('button') || w.includes('btn'));
+    const hasSearch = analysis.childNameWords.some(w => w.includes('search'));
 
-  private isFooter(_node: SceneNode, name: string): boolean {
-    return /footer|bottom/i.test(name);
-  }
+    const nameMatch = /header|nav|menu|navbar|topbar/i.test(name);
+    const structuralMatch = isAtTop && (hasLogo || hasNav || hasSearch);
+    const height = box.height;
 
-  private isNavigation(node: SceneNode, name: string): boolean {
-    return /nav|menu/i.test(name) && !this.isHeader(node, name);
-  }
+    if (!nameMatch && !structuralMatch) return null;
 
-  private isHero(node: SceneNode, name: string): boolean {
-    const h = node.absoluteBoundingBox?.height ?? 0;
-    return h > 300 && (/hero|banner|slider|cover|main|master/i.test(name) || h > 500);
-  }
+    const confidence = nameMatch && structuralMatch ? 0.95
+      : nameMatch ? 0.85
+      : structuralMatch ? 0.7
+      : 0.5;
 
-  private isCTA(_node: SceneNode, name: string): boolean {
-    return /cta|call.?to.?action|signup|register|get.?started/i.test(name);
-  }
-
-  private isTestimonial(_node: SceneNode, name: string): boolean {
-    return /testimonial|review|quote|feedback|client.?say/i.test(name);
-  }
-
-  private isGallery(_node: SceneNode, name: string): boolean {
-    return /gallery|portfolio|works|projects?/i.test(name);
-  }
-
-  private isProductCard(node: SceneNode, name: string): boolean {
-    const n = name;
-    const hasPrice = /price|\$|€|£|تومان/i.test(n);
-    const hasAddToCart = /cart|buy|add.?to.?cart|shop/i.test(n);
-    const repeated = Boolean(node.children && node.children.length >= 2);
-    return /product|card|item/i.test(n) || (repeated && (hasPrice || hasAddToCart));
-  }
-
-  private isProductDetail(_node: SceneNode, name: string): boolean {
-    return /product.?detail|single.?product|product.?page/i.test(name);
-  }
-
-  private isCart(_node: SceneNode, name: string): boolean {
-    return /cart|basket|shopping.?bag/i.test(name);
-  }
-
-  private isCheckout(_node: SceneNode, name: string): boolean {
-    return /checkout|payment|order/i.test(name);
-  }
-
-  private isPostCard(_node: SceneNode, name: string): boolean {
-    return /post|article|blog|card.*(date|author)/i.test(name);
-  }
-
-  private isPostDetail(_node: SceneNode, name: string): boolean {
-    return /single.?post|article.?detail|blog.?detail/i.test(name);
-  }
-
-  private isForm(_node: SceneNode, name: string): boolean {
-    return /form|input|field|contact|newsletter|subscribe|search/i.test(name);
-  }
-
-  private isContainer(node: SceneNode, name: string): boolean {
-    if (node.type === 'GROUP') return true;
-    if (node.layoutMode && node.layoutMode !== 'NONE') return true;
-    if (name.includes('container') || name.includes('wrapper')) return true;
-    return false;
-  }
-
-  // ── Builder Methods ────────────────────────────────────
-
-  private buildHeader(node: SceneNode, name: string): HeaderComponent {
     return {
       id: `header_${node.id}`,
       figmaNodeId: node.id,
       name: node.name,
-      confidence: 0.9,
+      confidence,
       type: name.includes('sticky') ? 'sticky' : name.includes('transparent') ? 'transparent' : 'static',
-      hasLogo: /logo|brand/i.test(name),
-      hasMenu: /menu|nav/i.test(name),
-      hasSearch: /search/i.test(name),
-      hasCTA: /cta|button/i.test(name),
+      hasLogo, hasMenu: hasNav, hasSearch, hasCTA,
       layout: {
-        alignment: 'space-between',
-        height: `${node.absoluteBoundingBox?.height ?? 80}px`,
+        alignment: analysis.isHorizontal
+          ? (analysis.layoutCss.justifyContent === 'center' ? 'center' : 'space-between')
+          : 'space-between',
+        height: `${height}px`,
         padding: { top: '16px', right: '40px', bottom: '16px', left: '40px' },
       },
     };
   }
 
-  private buildFooter(node: SceneNode, name: string): FooterComponent {
-    const cols = name.includes('4-col') ? 4 : name.includes('3-col') ? 3 : name.includes('2-col') ? 2 : 4;
+  private detectFooter(node: SceneNode, analysis: NodeAnalysis, name: string): FooterComponent | null {
+    const box = analysis.box!;
+    const isAtBottom = box.y > 500;
+    const hasLinks = analysis.childNameWords.some(w => w.includes('link') || w.includes('menu'));
+    const hasSocial = analysis.childNameWords.some(w => w.includes('social'));
+    const hasNewsletter = analysis.childNameWords.some(w => w.includes('newsletter') || w.includes('subscribe'));
+    const hasMultiColumn = analysis.totalChildren >= 2 && analysis.totalChildren <= 6;
+    const hasCopyright = analysis.childNameWords.some(w => w.includes('copy') || w.includes('right') || w.includes('©'));
+
+    const nameMatch = /footer|bottom/i.test(name);
+    const structuralMatch = (isAtBottom && (hasLinks || hasCopyright || hasMultiColumn)) || hasCopyright;
+
+    if (!nameMatch && !structuralMatch) return null;
+
+    const confidence = nameMatch && structuralMatch ? 0.9
+      : nameMatch ? 0.8
+      : structuralMatch ? 0.7
+      : 0.5;
+
+    const cols = name.includes('4-col') ? 4 : name.includes('3-col') ? 3 : name.includes('2-col') ? 2
+      : analysis.totalChildren >= 2 && analysis.totalChildren <= 4 ? analysis.totalChildren : 4;
+
     return {
       id: `footer_${node.id}`,
       figmaNodeId: node.id,
-      confidence: 0.85,
+      name: node.name,
+      confidence,
       columns: cols,
-      hasSocial: /social/i.test(name),
-      hasNewsletter: /newsletter|subscribe/i.test(name),
-      hasMenu: /menu|link/i.test(name),
+      hasSocial, hasNewsletter,
+      hasMenu: hasLinks,
     };
   }
 
-  private buildNavigation(node: SceneNode, name: string): NavigationComponent {
-    const items = node.children?.length ?? 3;
+  private detectNavigation(node: SceneNode, analysis: NodeAnalysis, name: string): NavigationComponent | null {
+    const hasMultipleItems = analysis.totalChildren >= 2 && analysis.totalChildren <= 12;
+    const allTextChildren = analysis.textCount === analysis.totalChildren || analysis.frameCount === analysis.totalChildren;
+    const itemsAreSmall = analysis.avgChildWidth < 200 && analysis.avgChildHeight < 60;
+
+    const nameMatch = /nav|menu/i.test(name);
+    const structuralMatch = hasMultipleItems && allTextChildren && itemsAreSmall;
+
+    if (!nameMatch && !structuralMatch) return null;
+
+    const isMega = analysis.totalChildren > 6 || /mega/i.test(name);
+    const isVertical = node.layoutMode === 'VERTICAL' || /vertical|sidebar/i.test(name);
+
     return {
       id: `nav_${node.id}`,
       figmaNodeId: node.id,
-      type: /mega/i.test(name) ? 'mega-menu' : /vertical|sidebar/i.test(name) ? 'vertical' : 'horizontal',
-      items,
+      type: isMega ? 'mega-menu' : isVertical ? 'vertical' : 'horizontal',
+      items: analysis.totalChildren || node.children?.length || 3,
       hasDropdown: /dropdown|submenu|mega/i.test(name),
     };
   }
 
-  private buildHero(node: SceneNode, name: string): HeroComponent {
+  private detectHero(node: SceneNode, analysis: NodeAnalysis, name: string): HeroComponent | null {
+    const box = analysis.box!;
+    const isLarge = box.height > 300;
+    const hasBigHeading = analysis.textCount > 0 && analysis.avgChildHeight > 30;
+    const hasButtons = analysis.buttonCount > 0;
+    const hasImage = analysis.imageCount > 0 || analysis.childNameWords.some(w => w.includes('image') || w.includes('hero'));
+    const textToTotal = analysis.totalChildren > 0 ? analysis.textCount / analysis.totalChildren : 0;
+
+    const nameMatch = /hero|banner|slider|cover|main|master/i.test(name);
+    const structuralMatch = isLarge && ((hasBigHeading && hasButtons) || (isLarge && box.height > 500));
+
+    if (!nameMatch && !structuralMatch) return null;
+
+    const confidence = nameMatch && box.height > 500 ? 0.95
+      : nameMatch ? 0.85
+      : structuralMatch && hasButtons ? 0.75
+      : 0.6;
+
+    const layout = name.includes('split') ? 'split'
+      : name.includes('centered') ? 'centered'
+      : (analysis.isHorizontal && analysis.imageCount > 0) ? 'split'
+      : 'fullwidth';
+
     return {
       id: `hero_${node.id}`,
       figmaNodeId: node.id,
-      confidence: 0.85,
-      layout: name.includes('split') ? 'split' : name.includes('centered') ? 'centered' : 'fullwidth',
+      name: node.name,
+      confidence,
+      layout,
       hasVideo: /video|vimeo|youtube/i.test(name),
-      hasSlider: /slider|carousel/i.test(name),
+      hasSlider: /slider|carousel/i.test(name) || (analysis.totalChildren > 3 && analysis.imageCount > 1),
       hasOverlay: /overlay|gradient/i.test(name),
       content: {
-        hasHeadline: true,
-        hasSubtext: true,
-        hasButtons: true,
-        hasImage: /image|photo|hero.?img/i.test(name),
+        hasHeadline: hasBigHeading,
+        hasSubtext: textToTotal > 0.3 || analysis.textCount > 1,
+        hasButtons,
+        hasImage,
       },
     };
   }
 
-  private buildCTA(node: SceneNode, name: string): CTAComponent {
-    return {
-      id: `cta_${node.id}`,
-      figmaNodeId: node.id,
-      confidence: 0.8,
-      type: /popup|modal/i.test(name) ? 'popup' : /inline/i.test(name) ? 'inline' : 'section',
-      hasButton: true,
-      hasImage: /image|photo|bg/i.test(name),
-    };
-  }
+  private detectProductCard(node: SceneNode, analysis: NodeAnalysis, name: string): ProductCardComponent | null {
+    const box = analysis.box!;
+    const isCardSized = box.width > 150 && box.width < 600 && box.height > 200 && box.height < 800;
+    const hasImage = analysis.imageCount > 0;
+    const hasText = analysis.textCount > 0;
+    const hasButton = analysis.buttonCount > 0;
+    const hasPrice = analysis.childNameWords.some(w =>
+      w.includes('price') || w.includes('$') || w.includes('€') || w.includes('£'));
+    const hasRating = analysis.childNameWords.some(w => w.includes('rating') || w.includes('star'));
+    const hasAddToCart = analysis.childNameWords.some(w => w.includes('cart') || w.includes('buy') || w.includes('add'));
 
-  private buildTestimonial(node: SceneNode, name: string): TestimonialComponent {
-    return {
-      id: `testimonial_${node.id}`,
-      figmaNodeId: node.id,
-      confidence: 0.8,
-      layout: name.includes('grid') ? 'grid' : name.includes('slider') ? 'slider' : 'single',
-      hasAvatar: /avatar|photo|face|image/i.test(name),
-      hasRating: /rating|star/i.test(name),
-      hasCompanyLogo: /logo|company|brand/i.test(name),
-    };
-  }
+    const nameMatch = /product|card|item/i.test(name);
+    const structuralMatch = isCardSized && hasImage && hasText && (hasPrice || hasAddToCart || hasButton);
 
-  private buildGallery(node: SceneNode, name: string): GalleryComponent {
-    const images = node.children?.filter(c => /image|photo|img/i.test(c.name)).length ?? 4;
-    return {
-      id: `gallery_${node.id}`,
-      figmaNodeId: node.id,
-      layout: name.includes('masonry') ? 'masonry' : name.includes('slider') ? 'slider' : 'grid',
-      imageCount: images,
-      hasLightbox: /lightbox|zoom|expand/i.test(name),
-      hasFilter: /filter|category|tab/i.test(name),
-    };
-  }
+    if (!nameMatch && !structuralMatch) return null;
+    if (!isCardSized && !nameMatch) return null;
 
-  private buildProductCard(node: SceneNode, name: string): ProductCardComponent {
-    const n = name;
-    const childrenText = node.children?.map(c => c.name.toLowerCase()).join(' ') ?? '';
-    const allText = n + ' ' + childrenText;
+    const confidence = nameMatch && hasPrice && hasImage ? 0.9
+      : nameMatch && hasButton ? 0.8
+      : structuralMatch ? 0.75
+      : nameMatch ? 0.65
+      : 0.5;
+
+    const allText = name + ' ' + analysis.childNameWords.join(' ');
 
     return {
       id: `product-card_${node.id}`,
       figmaNodeId: node.id,
       name: node.name,
-      confidence: 0.75,
+      confidence,
       structure: {
         productImage: {
           nodeId: this.findChildByPattern(node, /image|photo|img/i)?.id ?? `${node.id}_img`,
@@ -327,11 +412,11 @@ export class ComponentDetector {
           format: /sale|off|discount/i.test(allText) ? 'sale' : 'regular',
           hasCurrency: /\$|€|£|تومان/i.test(allText),
         },
-        productRating: /rating|star/i.test(allText) ? {
+        productRating: hasRating ? {
           nodeId: this.findChildByPattern(node, /rating|star/i)?.id ?? `${node.id}_rating`,
           style: 'stars',
         } : undefined,
-        shortDescription: /desc|excerpt|text|p>/i.test(allText) ? {
+        shortDescription: analysis.textCount > 2 ? {
           nodeId: this.findChildByPattern(node, /desc|excerpt|text/i)?.id ?? `${node.id}_desc`,
           maxLength: 100,
         } : undefined,
@@ -359,18 +444,28 @@ export class ComponentDetector {
     };
   }
 
-  private buildProductDetail(node: SceneNode, name: string): ProductDetailComponent {
+  private detectProductDetail(node: SceneNode, analysis: NodeAnalysis, name: string): ProductDetailComponent | null {
+    const isLarge = analysis.box ? analysis.box.height > 600 : false;
+    const hasGallery = analysis.imageCount >= 2;
+    const hasTitle = analysis.childNameWords.some(w => w.includes('title') || w.includes('name'));
+    const hasPrice = analysis.childNameWords.some(w => w.includes('price'));
+    const hasAddToCart = analysis.buttonCount > 0;
+
+    const nameMatch = /product.?detail|single.?product|product.?page/i.test(name);
+    const structuralMatch = isLarge && hasGallery && hasPrice && (hasAddToCart || hasTitle);
+
+    if (!nameMatch && !structuralMatch) return null;
+
     return {
       id: `product-detail_${node.id}`,
       figmaNodeId: node.id,
-      confidence: 0.8,
+      confidence: nameMatch ? 0.85 : 0.7,
       layout: name.includes('sidebar') ? 'sidebar-right' : 'fullwidth',
       sections: {
         productGallery: {
           nodeId: this.findChildByPattern(node, /gallery|image|photo|slider/i)?.id ?? `${node.id}_gallery`,
           type: 'thumbnails-bottom',
-          hasZoom: true,
-          hasLightbox: true,
+          hasZoom: true, hasLightbox: true,
         },
         productMeta: {
           title: { nodeId: `${node.id}_title`, tag: 'h1' },
@@ -387,129 +482,260 @@ export class ComponentDetector {
         productTabs: {
           nodeId: `${node.id}_tabs`,
           type: 'tabs',
-          hasDescription: true,
-          hasAdditionalInfo: true,
-          hasReviews: true,
+          hasDescription: true, hasAdditionalInfo: true, hasReviews: true,
         },
         relatedProducts: { nodeId: `${node.id}_related`, count: 4, columns: 4 },
       },
     };
   }
 
-  private buildCart(node: SceneNode, name: string): CartComponent {
+  private detectCTA(node: SceneNode, analysis: NodeAnalysis, name: string): CTAComponent | null {
+    const hasButton = analysis.buttonCount > 0 || analysis.childNameWords.some(w =>
+      w.includes('cta') || w.includes('button') || w.includes('btn') || w.includes('start') || w.includes('signup'));
+    const hasHeading = analysis.textCount > 0;
+    const isCompact = analysis.box ? analysis.box.height < 300 : false;
+
+    const nameMatch = /cta|call.?to.?action|signup|register|get.?started/i.test(name);
+    const structuralMatch = hasButton && hasHeading && isCompact;
+
+    if (!nameMatch && !structuralMatch) return null;
+
+    return {
+      id: `cta_${node.id}`,
+      figmaNodeId: node.id,
+      confidence: nameMatch ? 0.85 : 0.65,
+      type: /popup|modal/i.test(name) ? 'popup' : /inline/i.test(name) ? 'inline' : 'section',
+      hasButton,
+      hasImage: analysis.imageCount > 0,
+    };
+  }
+
+  private detectTestimonial(node: SceneNode, analysis: NodeAnalysis, name: string): TestimonialComponent | null {
+    const hasAvatar = analysis.childNameWords.some(w =>
+      w.includes('avatar') || w.includes('face') || w.includes('profile'));
+    const hasQuote = analysis.childNameWords.some(w =>
+      w.includes('quote') || w.includes('testimonial') || w.includes('review') || w.includes('feedback'));
+    const hasRating = analysis.childNameWords.some(w => w.includes('rating') || w.includes('star'));
+    const hasText = analysis.textCount > 1;
+    const hasName = analysis.childNameWords.some(w => w.includes('name') || w.includes('author'));
+
+    const nameMatch = /testimonial|review|quote|feedback|client.?say/i.test(name);
+    const structuralMatch = (hasQuote || (hasAvatar && hasText && hasName));
+
+    if (!nameMatch && !structuralMatch) return null;
+
+    return {
+      id: `testimonial_${node.id}`,
+      figmaNodeId: node.id,
+      confidence: nameMatch && structuralMatch ? 0.9
+        : nameMatch ? 0.8
+        : structuralMatch ? 0.7
+        : 0.5,
+      layout: name.includes('grid') ? 'grid' : name.includes('slider') ? 'slider'
+        : analysis.totalChildren > 3 ? 'grid' : 'single',
+      hasAvatar, hasRating,
+      hasCompanyLogo: analysis.childNameWords.some(w => w.includes('logo') || w.includes('company')),
+    };
+  }
+
+  private detectGallery(node: SceneNode, analysis: NodeAnalysis, name: string): GalleryComponent | null {
+    const hasManyChildren = analysis.totalChildren >= 3;
+    const hasImages = analysis.imageCount >= 2 || analysis.frameCount >= 3;
+
+    const nameMatch = /gallery|portfolio|works|projects?/i.test(name);
+    const structuralMatch = hasManyChildren && hasImages;
+
+    if (!nameMatch && !structuralMatch) return null;
+
+    return {
+      id: `gallery_${node.id}`,
+      figmaNodeId: node.id,
+      layout: name.includes('masonry') ? 'masonry' : name.includes('slider') ? 'slider' : 'grid',
+      imageCount: analysis.imageCount || analysis.totalChildren || 4,
+      hasLightbox: /lightbox|zoom|expand/i.test(name),
+      hasFilter: /filter|category|tab/i.test(name),
+    };
+  }
+
+  private detectCart(node: SceneNode, analysis: NodeAnalysis, name: string): CartComponent | null {
+    const hasItems = analysis.totalChildren >= 2;
+    const hasPrices = analysis.childNameWords.some(w => w.includes('price') || w.includes('$'));
+    const hasQuantity = analysis.childNameWords.some(w => w.includes('qty') || w.includes('quantity'));
+    const hasRemove = analysis.childNameWords.some(w => w.includes('remove') || w.includes('delete') || w.includes('x'));
+
+    const nameMatch = /cart|basket|shopping.?bag/i.test(name);
+    const structuralMatch = hasItems && hasPrices && hasQuantity;
+
+    if (!nameMatch && !structuralMatch) return null;
+
     return {
       id: `cart_${node.id}`,
       figmaNodeId: node.id,
-      confidence: 0.7,
+      confidence: nameMatch ? 0.8 : 0.65,
       type: name.includes('mini') || name.includes('slide') ? 'mini-cart' : 'full-cart',
-      hasQuantityControl: true,
-      hasRemoveButton: true,
+      hasQuantityControl: hasQuantity,
+      hasRemoveButton: hasRemove,
       hasCouponInput: /coupon|code|discount/i.test(name),
       hasProceedToCheckout: true,
     };
   }
 
-  private buildCheckout(node: SceneNode, name: string): CheckoutComponent {
+  private detectCheckout(node: SceneNode, analysis: NodeAnalysis, name: string): CheckoutComponent | null {
+    const hasFormFields = analysis.inputCount > 0 || analysis.childNameWords.some(w =>
+      w.includes('input') || w.includes('field') || w.includes('form'));
+    const hasSummary = analysis.childNameWords.some(w => w.includes('summary') || w.includes('total') || w.includes('order'));
+    const hasPayment = analysis.childNameWords.some(w =>
+      w.includes('payment') || w.includes('card') || w.includes('paypal'));
+    const hasTwoColumn = analysis.totalChildren >= 2 && analysis.isHorizontal;
+
+    const nameMatch = /checkout|payment|order/i.test(name);
+    const structuralMatch = hasFormFields && (hasSummary || hasPayment);
+
+    if (!nameMatch && !structuralMatch) return null;
+
     return {
       id: `checkout_${node.id}`,
       figmaNodeId: node.id,
-      confidence: 0.7,
-      layout: name.includes('two') || name.includes('2') ? 'two-column' : 'single-column',
-      hasBillingForm: true,
-      hasShippingForm: /ship/i.test(name),
-      hasOrderSummary: true,
-      hasPaymentMethods: true,
+      confidence: nameMatch ? 0.85 : 0.65,
+      layout: hasTwoColumn ? 'two-column' : 'single-column',
+      hasBillingForm: hasFormFields,
+      hasShippingForm: /ship/i.test(name) || analysis.childNameWords.some(w => w.includes('ship')),
+      hasOrderSummary: hasSummary,
+      hasPaymentMethods: hasPayment,
     };
   }
 
-  private buildPostCard(node: SceneNode, name: string): PostCardComponent {
+  private detectPostCard(node: SceneNode, analysis: NodeAnalysis, name: string): PostCardComponent | null {
+    const isCardSized = analysis.box ? (analysis.box.width > 200 && analysis.box.width < 600) : false;
+    const hasImage = analysis.imageCount > 0;
+    const hasTitle = analysis.childNameWords.some(w => w.includes('title') || w.includes('heading'));
+    const hasDate = analysis.childNameWords.some(w => w.includes('date') || w.includes('time'));
+    const hasAuthor = analysis.childNameWords.some(w => w.includes('author') || w.includes('by'));
+    const hasExcerpt = analysis.textCount > 1;
+
+    const nameMatch = /post|article|blog|card/i.test(name);
+    const structuralMatch = isCardSized && hasTitle && (hasImage || hasExcerpt);
+
+    if (!nameMatch && !structuralMatch) return null;
+
     return {
       id: `post-card_${node.id}`,
       figmaNodeId: node.id,
-      confidence: 0.7,
-      hasImage: /image|photo|thumbnail/i.test(name),
-      hasCategory: /category|tag|label/i.test(name),
-      hasDate: /date|time|calendar/i.test(name),
-      hasAuthor: /author|by/i.test(name),
-      hasExcerpt: /excerpt|text|desc/i.test(name),
-      hasReadMore: /read.?more|continue/i.test(name),
-      layout: name.includes('horizontal') ? 'horizontal' : 'vertical',
+      confidence: nameMatch && structuralMatch ? 0.85
+        : nameMatch ? 0.7 : 0.6,
+      hasImage,
+      hasCategory: analysis.childNameWords.some(w => w.includes('category') || w.includes('tag')),
+      hasDate,
+      hasAuthor,
+      hasExcerpt,
+      hasReadMore: analysis.buttonCount > 0 || analysis.childNameWords.some(w => w.includes('read') || w.includes('more')),
+      layout: name.includes('horizontal') || analysis.isHorizontal ? 'horizontal' : 'vertical',
     };
   }
 
-  private buildPostDetail(node: SceneNode, name: string): PostDetailComponent {
+  private detectPostDetail(node: SceneNode, analysis: NodeAnalysis, name: string): PostDetailComponent | null {
+    const isLarge = analysis.box ? analysis.box.height > 500 : false;
+    const hasTitle = analysis.childNameWords.some(w => w.includes('title'));
+    const hasText = analysis.textCount > 2;
+
+    const nameMatch = /single.?post|article.?detail|blog.?detail/i.test(name);
+    const structuralMatch = isLarge && hasTitle && hasText;
+
+    if (!nameMatch && !structuralMatch) return null;
+
     return {
       id: `post-detail_${node.id}`,
       figmaNodeId: node.id,
-      confidence: 0.7,
-      hasFeaturedImage: true,
+      confidence: nameMatch ? 0.8 : 0.65,
+      hasFeaturedImage: analysis.imageCount > 0,
       hasAuthorBio: /author|bio|about/i.test(name),
       hasRelatedPosts: /related|similar/i.test(name),
-      hasComments: /comment|reply/i.test(name),
+      hasComments: /comment|reply/i.test(name) || analysis.childNameWords.some(w => w.includes('comment')),
       hasShareButtons: /share|social/i.test(name),
     };
   }
 
-  private buildForm(node: SceneNode, name: string): FormComponent {
+  private detectForm(node: SceneNode, analysis: NodeAnalysis, name: string): FormComponent | null {
+    const hasInputs = analysis.inputCount > 0 || analysis.childNameWords.some(w =>
+      w.includes('input') || w.includes('field') || w.includes('form'));
+    const hasTextareas = analysis.childNameWords.some(w =>
+      w.includes('textarea') || w.includes('message') || w.includes('comment'));
+    const hasSubmit = analysis.buttonCount > 0 || analysis.childNameWords.some(w =>
+      w.includes('submit') || w.includes('send') || w.includes('subscribe'));
+
+    const nameMatch = /form|input|field|contact|newsletter|subscribe|search/i.test(name);
+    const structuralMatch = (hasInputs || hasTextareas) && hasSubmit;
+
+    if (!nameMatch && !structuralMatch) return null;
+
     const inputs = (node.children ?? []).filter(c => /input|field|text/i.test(c.name));
     const textareas = (node.children ?? []).filter(c => /textarea|message|comment/i.test(c.name));
-
-    const getInputs = () => inputs.map(c => ({
-      nodeId: c.id,
-      placeholder: '',
-      type: 'text' as const,
-      required: true,
-    }));
-
-    const getTextareas = () => textareas.map(c => ({
-      nodeId: c.id,
-      placeholder: '',
-      rows: 5,
-      required: false,
-    }));
 
     return {
       id: `form_${node.id}`,
       figmaNodeId: node.id,
       name: node.name,
-      confidence: 0.8,
-      type: /newsletter|subscribe/i.test(name) ? 'newsletter' :
-            /login|sign.?in/i.test(name) ? 'login' :
-            /register|sign.?up/i.test(name) ? 'register' :
-            /search/i.test(name) ? 'search' : 'contact',
+      confidence: nameMatch && structuralMatch ? 0.9
+        : structuralMatch ? 0.75 : 0.6,
+      type: /newsletter|subscribe/i.test(name) ? 'newsletter'
+        : /login|sign.?in/i.test(name) ? 'login'
+        : /register|sign.?up/i.test(name) ? 'register'
+        : /search/i.test(name) ? 'search' : 'contact',
       fields: {
-        inputs: getInputs().length > 0 ? getInputs() : undefined,
-        textareas: getTextareas().length > 0 ? getTextareas() : undefined,
+        inputs: inputs.length > 0 ? inputs.map(c => ({
+          nodeId: c.id,
+          placeholder: '',
+          type: 'text' as const,
+          required: true,
+        })) : undefined,
+        textareas: textareas.length > 0 ? textareas.map(c => ({
+          nodeId: c.id,
+          placeholder: '',
+          rows: 5,
+          required: false,
+        })) : undefined,
       },
       submitButton: {
         nodeId: `${node.id}_submit`,
         text: 'Submit',
       },
       layout: {
-        columns: 1,
+        columns: analysis.isHorizontal && analysis.totalChildren <= 2 ? 2 : 1,
         fieldSpacing: 16,
         labelPosition: 'top',
       },
     };
   }
 
-  private buildContainer(node: SceneNode, _name: string): ContainerComponent {
-    return {
-      id: `container_${node.id}`,
-      figmaNodeId: node.id,
-      type: node.layoutMode === 'HORIZONTAL' ? 'flex' : node.layoutMode === 'VERTICAL' ? 'flex' : 'single',
-      direction: node.layoutMode === 'HORIZONTAL' ? 'row' : 'column',
-      gap: node.itemSpacing ? `${node.itemSpacing}px` : undefined,
-    };
+  private detectContainer(node: SceneNode, analysis: NodeAnalysis, _name: string): ContainerComponent | null {
+    if (node.type === 'GROUP') {
+      return {
+        id: `container_${node.id}`,
+        figmaNodeId: node.id,
+        type: 'flex',
+        direction: 'column',
+        gap: undefined,
+      };
+    }
+    if (analysis.hasAutoLayout) {
+      return {
+        id: `container_${node.id}`,
+        figmaNodeId: node.id,
+        type: 'flex',
+        direction: analysis.isHorizontal ? 'row' : 'column',
+        gap: node.itemSpacing ? `${node.itemSpacing}px` : undefined,
+      };
+    }
+    return null;
   }
 
-  private buildSection(node: SceneNode, name: string): SectionComponent {
+  private buildSection(node: SceneNode, name: string, analysis: NodeAnalysis): SectionComponent {
     return {
       id: `section_${node.id}`,
       figmaNodeId: node.id,
       name: node.name,
       type: this.detectSectionType(name),
-      confidence: 0.6,
+      confidence: analysis.hasAutoLayout ? 0.75 : 0.5,
       layout: {
         fullWidth: !name.includes('container'),
         hasContainer: true,
@@ -541,8 +767,7 @@ export class ComponentDetector {
   }
 
   detectProjectType(nodes: SceneNode[], components: ComponentClassification): ProjectTypeDetection {
-    const names = nodes.map(n => n.name.toLowerCase()).join(' ');
-    const allNames = names;
+    const allNames = nodes.map(n => n.name.toLowerCase()).join(' ');
 
     const hasProductCards = components.productCards.length > 0 || /product|shop/i.test(allNames);
     const hasAddToCart = /add.?to.?cart|buy|cart/i.test(allNames);

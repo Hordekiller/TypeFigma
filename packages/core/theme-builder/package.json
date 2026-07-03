@@ -11,11 +11,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@typefigma/elementor-mapper": "*",
-    "archiver": "^7.0.0"
+    "@typefigma/code-generator": "*",
+    "@typefigma/elementor-mapper": "*"
   },
   "devDependencies": {
-    "@types/archiver": "^6.0.0",
     "typescript": "^5.5.0"
   }
 }
