@@ -116,14 +116,11 @@ const mockComponents = {
     figmaNodeId: 'hero_1',
     name: 'Hero Banner',
     confidence: 0.85,
-    type: 'split',
-    hasHeadline: true,
-    hasSubtext: true,
-    hasCTA: true,
-    hasImage: true,
-    hasBadge: false,
-    alignment: 'left',
-    layout: { minHeight: '600px', maxWidth: '1280px', padding: { top: '4rem', right: '2rem', bottom: '4rem', left: '2rem' } },
+    layout: 'split',
+    hasVideo: false,
+    hasSlider: false,
+    hasOverlay: false,
+    content: { hasHeadline: true, hasSubtext: true, hasButtons: true, hasImage: true },
   }],
   ctaSections: [{
     id: 'cta_1',
@@ -268,6 +265,7 @@ try {
 
 } catch (err) {
   console.error('\nError:', err instanceof Error ? err.message : err);
+  if (err instanceof Error && err.stack) console.error(err.stack);
   process.exit(1);
 }
 

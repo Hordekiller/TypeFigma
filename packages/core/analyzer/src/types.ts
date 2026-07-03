@@ -374,6 +374,7 @@ export interface SectionComponent {
   name: string;
   type: string;
   confidence: number;
+  hasGrid?: boolean;
   layout: {
     fullWidth: boolean;
     hasContainer: boolean;

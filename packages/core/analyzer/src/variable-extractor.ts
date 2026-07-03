@@ -138,7 +138,7 @@ export class VariableExtractor {
 
   private buildTokens(collections: DesignCollection[]): ExtractedTokens {
     const colors: ColorTokens = this.buildColorTokens(collections);
-    const typography: TypographyTokens = this.buildTypographyTokens();
+    const typography: TypographyTokens = this.buildTypographyTokens(collections);
 
     const spacing: Record<string, string> = {};
     const sizing: Record<string, string> = {};
@@ -147,10 +147,11 @@ export class VariableExtractor {
     const breakpoints: Record<string, string> = {};
 
     for (const coll of collections) {
-      const isSize = coll.name.toLowerCase().includes('size') || coll.name.toLowerCase().includes('spacing');
-      const isRadius = coll.name.toLowerCase().includes('radius') || coll.name.toLowerCase().includes('corner');
-      const isShadow = coll.name.toLowerCase().includes('shadow') || coll.name.toLowerCase().includes('effect');
-      const isBreakpoint = coll.name.toLowerCase().includes('breakpoint') || coll.name.toLowerCase().includes('viewport');
+      const nameLower = coll.name.toLowerCase();
+      const isSize = nameLower.includes('size') || nameLower.includes('spacing');
+      const isRadius = nameLower.includes('radius') || nameLower.includes('corner');
+      const isShadow = nameLower.includes('shadow') || nameLower.includes('effect');
+      const isBreakpoint = nameLower.includes('breakpoint') || nameLower.includes('viewport');
 
       for (const v of coll.variables) {
         const rawVal = v.valuesByMode[coll.defaultMode];
@@ -165,7 +166,16 @@ export class VariableExtractor {
           const key = v.name.split('/').pop()?.toLowerCase() || v.cssName;
           borderRadius[key] = `${resolvedVal}px`;
         } else if (isShadow) {
-          // handled below
+          if (v.resolvedType === 'COLOR' && typeof resolvedVal === 'string') {
+            const key = v.name.split('/').pop()?.toLowerCase() || v.cssName;
+            const offsetX = coll.variables.find(sv => sv.name === `${v.name}/offset-x`)?.resolvedValues[coll.defaultMode] || 0;
+            const offsetY = coll.variables.find(sv => sv.name === `${v.name}/offset-y`)?.resolvedValues[coll.defaultMode] || 0;
+            const blur = coll.variables.find(sv => sv.name === `${v.name}/blur`)?.resolvedValues[coll.defaultMode] || 4;
+            shadows[key] = `${offsetX}px ${offsetY}px ${blur}px ${resolvedVal}`;
+          } else if (typeof resolvedVal === 'string' && resolvedVal.includes('px')) {
+            const key = v.name.split('/').pop()?.toLowerCase() || v.cssName;
+            shadows[key] = resolvedVal;
+          }
         } else if (isBreakpoint && v.resolvedType === 'FLOAT' && typeof resolvedVal === 'number') {
           const key = v.name.split('/').pop()?.toLowerCase() || v.cssName;
           breakpoints[key] = `${resolvedVal}px`;
@@ -196,7 +206,12 @@ export class VariableExtractor {
       border: { default: '#e5e7eb', hover: '#d1d5db', focus: '#3b82f6' },
     };
 
+    const processedCollections = new Set<string>();
+
     for (const coll of collections) {
+      const nameLower = coll.name.toLowerCase();
+      if (nameLower.includes('shadow') || nameLower.includes('effect')) continue;
+
       for (const v of coll.variables) {
         if (v.resolvedType !== 'COLOR') continue;
         const val = v.isAlias
@@ -235,40 +250,86 @@ export class VariableExtractor {
           if (!tokens.ecommerce) tokens.ecommerce = { sale: '#ef4444', newArrival: '#10b981', outOfStock: '#6b7280', inStock: '#10b981', price: '#111827', salePrice: '#ef4444', rating: '#f59e0b' };
           (tokens.ecommerce as Record<string, string>)[shade] = val;
         } else {
-          // Store as neutral variants
           tokens.neutral[`variable-${shade}`] = val;
         }
       }
+
+      processedCollections.add(coll.id);
     }
 
     return tokens;
   }
 
-  private buildTypographyTokens(): TypographyTokens {
+  private buildTypographyTokens(collections: DesignCollection[]): TypographyTokens {
+    let headingFont = 'Inter';
+    let bodyFont = 'Inter';
+
+    const textStyles = {} as TypographyTokens['textStyles'];
+
+    for (const coll of collections) {
+      const nameLower = coll.name.toLowerCase();
+      const isTypography = nameLower.includes('typography') || nameLower.includes('font') || nameLower.includes('type');
+
+      for (const v of coll.variables) {
+        if (isTypography && v.resolvedType === 'STRING' && typeof v.resolvedValues[coll.defaultMode] === 'string') {
+          const val = v.resolvedValues[coll.defaultMode] as string;
+          const name = v.name.toLowerCase();
+
+          if (name.includes('heading') || name.includes('display')) {
+            if (name.includes('family') || name.includes('font')) headingFont = val;
+          } else if (name.includes('body') || name.includes('text')) {
+            if (name.includes('family') || name.includes('font')) bodyFont = val;
+          } else if (name.includes('mono')) {
+            if (name.includes('family') || name.includes('font')) headingFont = val;
+          }
+        }
+
+        if (isTypography && v.resolvedType === 'FLOAT') {
+          const val = v.resolvedValues[coll.defaultMode];
+          const name = v.name.toLowerCase();
+          if (typeof val === 'number') {
+            if (name.includes('h1') || name.includes('heading 1')) {
+              textStyles.h1 = { ...(textStyles.h1 || this.makeTextStyle(headingFont, 48, 700)), fontSize: `${val}px` };
+            } else if (name.includes('h2') || name.includes('heading 2')) {
+              textStyles.h2 = { ...(textStyles.h2 || this.makeTextStyle(headingFont, 36, 700)), fontSize: `${val}px` };
+            } else if (name.includes('h3') || name.includes('heading 3')) {
+              textStyles.h3 = { ...(textStyles.h3 || this.makeTextStyle(headingFont, 30, 600)), fontSize: `${val}px` };
+            } else if (name.includes('body') || name.includes('paragraph')) {
+              textStyles.body = { ...(textStyles.body || this.makeTextStyle(bodyFont, 16, 400)), fontSize: `${val}px` };
+            }
+          }
+        }
+      }
+    }
+
     return {
       fontFamilies: {
-        heading: { name: 'Inter', weights: [300, 400, 500, 600, 700], fallback: 'system-ui, sans-serif' },
-        body: { name: 'Inter', weights: [300, 400, 500, 600, 700], fallback: 'system-ui, sans-serif' },
+        heading: { name: headingFont, weights: [300, 400, 500, 600, 700], fallback: 'system-ui, sans-serif' },
+        body: { name: bodyFont, weights: [300, 400, 500, 600, 700], fallback: 'system-ui, sans-serif' },
       },
       fontSizes: { xs: '0.75rem', sm: '0.875rem', base: '1rem', lg: '1.125rem', xl: '1.25rem', '2xl': '1.5rem', '3xl': '1.875rem', '4xl': '2.25rem' },
       fontWeights: { light: 300, normal: 400, medium: 500, semibold: 600, bold: 700 },
       lineHeights: { none: 1, tight: 1.25, normal: 1.5, relaxed: 1.625 },
       letterSpacing: { normal: '0', tight: '-0.025em', wide: '0.025em' },
-      textStyles: {
-        h1: { fontFamily: 'Inter', fontSize: '48px', fontWeight: 700, lineHeight: '1.2', letterSpacing: '-0.02em' },
-        h2: { fontFamily: 'Inter', fontSize: '36px', fontWeight: 700, lineHeight: '1.25', letterSpacing: '-0.02em' },
-        h3: { fontFamily: 'Inter', fontSize: '30px', fontWeight: 600, lineHeight: '1.3', letterSpacing: '-0.01em' },
-        h4: { fontFamily: 'Inter', fontSize: '24px', fontWeight: 600, lineHeight: '1.35', letterSpacing: '-0.01em' },
-        h5: { fontFamily: 'Inter', fontSize: '20px', fontWeight: 600, lineHeight: '1.4', letterSpacing: '0' },
-        h6: { fontFamily: 'Inter', fontSize: '16px', fontWeight: 600, lineHeight: '1.5', letterSpacing: '0' },
-        body: { fontFamily: 'Inter', fontSize: '16px', fontWeight: 400, lineHeight: '1.6', letterSpacing: '0' },
-        bodyLarge: { fontFamily: 'Inter', fontSize: '18px', fontWeight: 400, lineHeight: '1.6', letterSpacing: '0' },
-        bodySmall: { fontFamily: 'Inter', fontSize: '14px', fontWeight: 400, lineHeight: '1.5', letterSpacing: '0' },
-        caption: { fontFamily: 'Inter', fontSize: '12px', fontWeight: 400, lineHeight: '1.4', letterSpacing: '0.025em' },
-        overline: { fontFamily: 'Inter', fontSize: '12px', fontWeight: 600, lineHeight: '1.2', letterSpacing: '0.05em' },
-        button: { fontFamily: 'Inter', fontSize: '16px', fontWeight: 600, lineHeight: '1', letterSpacing: '0' },
+      textStyles: Object.keys(textStyles).length > 0 ? textStyles : {
+        h1: { fontFamily: headingFont, fontSize: '48px', fontWeight: 700, lineHeight: '1.2', letterSpacing: '-0.02em' },
+        h2: { fontFamily: headingFont, fontSize: '36px', fontWeight: 700, lineHeight: '1.25', letterSpacing: '-0.02em' },
+        h3: { fontFamily: headingFont, fontSize: '30px', fontWeight: 600, lineHeight: '1.3', letterSpacing: '-0.01em' },
+        h4: { fontFamily: headingFont, fontSize: '24px', fontWeight: 600, lineHeight: '1.35', letterSpacing: '-0.01em' },
+        h5: { fontFamily: headingFont, fontSize: '20px', fontWeight: 600, lineHeight: '1.4', letterSpacing: '0' },
+        h6: { fontFamily: headingFont, fontSize: '16px', fontWeight: 600, lineHeight: '1.5', letterSpacing: '0' },
+        body: { fontFamily: bodyFont, fontSize: '16px', fontWeight: 400, lineHeight: '1.6', letterSpacing: '0' },
+        bodyLarge: { fontFamily: bodyFont, fontSize: '18px', fontWeight: 400, lineHeight: '1.6', letterSpacing: '0' },
+        bodySmall: { fontFamily: bodyFont, fontSize: '14px', fontWeight: 400, lineHeight: '1.5', letterSpacing: '0' },
+        caption: { fontFamily: bodyFont, fontSize: '12px', fontWeight: 400, lineHeight: '1.4', letterSpacing: '0.025em' },
+        overline: { fontFamily: bodyFont, fontSize: '12px', fontWeight: 600, lineHeight: '1.2', letterSpacing: '0.05em' },
+        button: { fontFamily: bodyFont, fontSize: '16px', fontWeight: 600, lineHeight: '1', letterSpacing: '0' },
       },
     };
+  }
+
+  private makeTextStyle(fontFamily: string, fontSize: number, fontWeight: number) {
+    return { fontFamily, fontSize: `${fontSize}px`, fontWeight, lineHeight: '1.5', letterSpacing: '0' };
   }
 
   private generateCSS(collections: DesignCollection[]): string {

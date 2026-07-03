@@ -101,7 +101,25 @@ describe('Validator', () => {
     ];
     const report = validator.validate(files);
     const hasThemeName = report.errors.some(e => e.message.toLowerCase().includes('theme name'));
-    const hasMissing = report.structure.missingRequired.length > 0;
     expect(hasThemeName || !report.summary.passed).toBe(true);
+  });
+
+  it('should detect Elementor configuration issues', () => {
+    const files: ThemeFile[] = [
+      ...createValidTheme(),
+    ];
+    const report = validator.validate(files);
+    expect(report.info.some(i => i.file === 'inc/elementor-widgets.php')).toBe(true);
+  });
+
+  it('should handle files with Buffer content', () => {
+    const files: ThemeFile[] = [
+      ...createValidTheme(),
+      { path: 'screenshot.png', content: Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]) },
+      { path: 'favicon.ico', content: Buffer.from([0, 0, 1, 0]) },
+    ];
+    const report = validator.validate(files);
+    expect(report.errors.length).toBe(0);
+    expect(report.performance.totalSize).toBeGreaterThan(0);
   });
 });

@@ -13,6 +13,9 @@ export interface TextContent {
   parentName: string;
   depth: number;
   role: TextRole;
+  hyperlink?: string;
+  letterCase?: string;
+  textDecoration?: string;
 }
 
 export type TextRole = 'heading' | 'body' | 'caption' | 'label' | 'button' | 'link' | 'badge' | 'unknown';
@@ -57,10 +60,13 @@ export class ContentExtractor {
             parentName,
             depth,
             role: this.detectTextRole(node, parentName),
+            hyperlink: node.hyperlink ? (typeof node.hyperlink === 'string' ? node.hyperlink : node.hyperlink.url) : undefined,
+            letterCase: node.style?.letterCase,
+            textDecoration: node.style?.textDecoration,
           };
           textNodes.push(entry);
 
-          const sectionKey = this.findSectionKey(sectionContent, parentId, parentName);
+          const sectionKey = this.findSectionKey(sectionContent, node, parentId, parentName);
           if (sectionKey) {
             sectionContent[sectionKey].texts.push(entry);
           }
@@ -68,18 +74,21 @@ export class ContentExtractor {
       }
 
       const imageFills = this.getImageFills(node);
-      if (imageFills.length > 0) {
+      const strokeImageFills = this.getStrokeImageFills(node);
+      const allFills = [...imageFills, ...strokeImageFills];
+
+      if (allFills.length > 0) {
         const box = node.absoluteBoundingBox;
         const entry: ImageContent = {
           nodeId: node.id,
           parentId,
           parentName,
-          fills: imageFills,
+          fills: allFills,
           aspectRatio: box && box.height > 0 ? box.width / box.height : 1,
         };
         imageNodes.push(entry);
 
-        const sectionKey = this.findSectionKey(sectionContent, parentId, parentName);
+        const sectionKey = this.findSectionKey(sectionContent, node, parentId, parentName);
         if (sectionKey) {
           sectionContent[sectionKey].images.push(entry);
         }
@@ -156,12 +165,44 @@ export class ContentExtractor {
       }));
   }
 
+  private getStrokeImageFills(node: SceneNode): ImageFill[] {
+    if (!node.strokes) return [];
+    return node.strokes
+      .filter((f: Paint) => f.type === 'IMAGE' && f.visible !== false)
+      .map((f: Paint) => ({
+        type: f.type,
+        imageRef: f.imageRef,
+        scaleMode: f.scaleMode,
+      }));
+  }
+
   private findSectionKey(
     sections: Record<string, SectionContent>,
+    node: SceneNode,
     parentId: string,
     _parentName: string,
   ): string | null {
     if (sections[parentId]) return parentId;
+
+    const parent = this.findParentNode(node, parentId);
+    if (parent) {
+      const walkUp = (n: typeof parent): string | null => {
+        if (sections[n.id]) return n.id;
+        return null;
+      };
+      return walkUp(parent);
+    }
+    return null;
+  }
+
+  private findParentNode(node: SceneNode, parentId: string): SceneNode | null {
+    if (node.children) {
+      for (const child of node.children) {
+        if (child.id === parentId) return child;
+        const found = this.findParentNode(child, parentId);
+        if (found) return found;
+      }
+    }
     return null;
   }
 
@@ -192,7 +233,8 @@ export class ContentExtractor {
       if (node.type === 'TEXT' && node.characters) {
         const text = node.characters.trim();
         if (text) {
-          result[node.name] = text;
+          const key = `${node.id}`;
+          result[key] = text;
         }
       }
       if (node.children) {

@@ -3,6 +3,7 @@ import type {
   ExtractedTokens,
   ColorTokens,
   TypographyTokens,
+  FontStyle,
   BorderTokens,
   TransitionTokens,
 } from './types.js';
@@ -57,7 +58,6 @@ export class TokenExtractor {
     return result;
   }
 
-  // ── Color Scanning ──────────────────────────────────
 
   private scanColorUsage(nodes: SceneNode[], styles?: FigmaStyles): ColorUsage[] {
     const usageMap = new Map<string, ColorUsage>();
@@ -77,11 +77,24 @@ export class TokenExtractor {
 
       if (node.fills) {
         for (const fill of node.fills) {
-          if (fill.visible !== false && fill.color) {
+          if (fill.visible === false) continue;
+          if (fill.type === 'SOLID' && fill.color) {
             const hex = this.rgbToHex(fill.color);
             const alpha = fill.color.a;
             if (alpha >= 0.01) {
               record(hex, alpha < 1 ? 'fill-transparent' : 'fill');
+            }
+          } else if (fill.type === 'GRADIENT_LINEAR' || fill.type === 'GRADIENT_RADIAL'
+            || fill.type === 'GRADIENT_ANGULAR' || fill.type === 'GRADIENT_DIAMOND') {
+            if (fill.gradientStops) {
+              for (const stop of fill.gradientStops) {
+                if (stop.color) {
+                  const hex = this.rgbToHex(stop.color);
+                  if (stop.color.a >= 0.01) {
+                    record(hex, `gradient-${fill.type.toLowerCase()}`);
+                  }
+                }
+              }
             }
           }
         }
@@ -89,7 +102,7 @@ export class TokenExtractor {
 
       if (node.strokes) {
         for (const stroke of node.strokes) {
-          if (stroke.visible !== false && stroke.color) {
+          if (stroke.visible !== false && stroke.type === 'SOLID' && stroke.color) {
             const hex = this.rgbToHex(stroke.color);
             record(hex, 'stroke');
           }
@@ -98,7 +111,7 @@ export class TokenExtractor {
 
       if (node.style?.fills) {
         for (const fill of node.style.fills) {
-          if (fill.color) {
+          if (fill.type === 'SOLID' && fill.color) {
             const hex = this.rgbToHex(fill.color);
             record(hex, 'text');
           }
@@ -178,7 +191,7 @@ export class TokenExtractor {
     this.fillColorScale(info, info['500'] || '#3b82f6');
 
     const textPrimaryColor = usages.find(u =>
-      u.contexts.includes('text') && !u.hex.startsWith('#fff') && !u.hex.startsWith('#000'))?.hex
+      u.contexts.includes('text') && u.hex !== '#ffffff' && u.hex !== '#000000')?.hex
       ?? neutral['900'] ?? '#111827';
     const textSecondaryColor = usages.find(u =>
       u.contexts.includes('text') && u.hex !== textPrimaryColor)?.hex
@@ -218,7 +231,6 @@ export class TokenExtractor {
     };
   }
 
-  // ── Font Scanning ──────────────────────────────────
 
   private scanFontUsage(nodes: SceneNode[], styles?: FigmaStyles): FontUsage[] {
     const usageMap = new Map<string, FontUsage>();
@@ -258,26 +270,15 @@ export class TokenExtractor {
   }
 
   private buildTypographyTokens(fontUsages: FontUsage[], styles?: FigmaStyles): TypographyTokens {
-    const textStyles: TypographyTokens['textStyles'] = {
-      h1: this.makeTextStyle(48, 700, '1.2', '-0.02em'),
-      h2: this.makeTextStyle(36, 700, '1.25', '-0.02em'),
-      h3: this.makeTextStyle(30, 600, '1.3', '-0.01em'),
-      h4: this.makeTextStyle(24, 600, '1.35', '-0.01em'),
-      h5: this.makeTextStyle(20, 600, '1.4', '0'),
-      h6: this.makeTextStyle(16, 600, '1.5', '0'),
-      body: this.makeTextStyle(16, 400, '1.6', '0'),
-      bodyLarge: this.makeTextStyle(18, 400, '1.6', '0'),
-      bodySmall: this.makeTextStyle(14, 400, '1.5', '0'),
-      caption: this.makeTextStyle(12, 400, '1.4', '0.025em'),
-      overline: this.makeTextStyle(12, 600, '1.2', '0.05em'),
-      button: this.makeTextStyle(16, 600, '1', '0'),
-    };
+    const mainFont = fontUsages.length > 0 ? fontUsages[0].family : 'Inter';
+
+    const textStyles = {} as TypographyTokens['textStyles'];
 
     if (styles?.textStyles) {
       for (const style of styles.textStyles) {
         const name = style.name.toLowerCase();
-        const entry = {
-          fontFamily: style.fontFamily || 'Inter',
+        const entry: FontStyle = {
+          fontFamily: style.fontFamily || mainFont,
           fontSize: `${style.fontSize}px`,
           fontWeight: style.fontWeight,
           lineHeight: typeof style.lineHeight === 'number'
@@ -296,20 +297,31 @@ export class TokenExtractor {
         else if (name.includes('caption') || name.includes('small')) textStyles.caption = entry;
         else if (name.includes('button') || name.includes('btn')) textStyles.button = entry;
       }
-    } else if (fontUsages.length > 0) {
-      const largest = fontUsages[0];
-      const h1Size = largest.size >= 36 ? largest.size : Math.min(largest.size * 2, 72);
-      textStyles.h1 = this.makeTextStyle(
-        h1Size, largest.weight, '1.2', '-0.02em'
-      );
-      textStyles.body = this.makeTextStyle(
-        this.getMostCommonSize(fontUsages.flatMap(f => [f.size])),
-        this.getMostCommonWeight(fontUsages.flatMap(f => [f.weight])),
-        '1.6', '0'
-      );
     }
 
-    const mainFont = fontUsages.length > 0 ? fontUsages[0].family : 'Inter';
+    textStyles.h1 ??= this.makeTextStyle(mainFont, 48, 700, '1.2', '-0.02em');
+    textStyles.h2 ??= this.makeTextStyle(mainFont, 36, 700, '1.25', '-0.02em');
+    textStyles.h3 ??= this.makeTextStyle(mainFont, 30, 600, '1.3', '-0.01em');
+    textStyles.h4 ??= this.makeTextStyle(mainFont, 24, 600, '1.35', '-0.01em');
+    textStyles.h5 ??= this.makeTextStyle(mainFont, 20, 600, '1.4', '0');
+    textStyles.h6 ??= this.makeTextStyle(mainFont, 16, 600, '1.5', '0');
+    textStyles.body ??= this.makeTextStyle(mainFont, 16, 400, '1.6', '0');
+    textStyles.bodyLarge ??= this.makeTextStyle(mainFont, 18, 400, '1.6', '0');
+    textStyles.bodySmall ??= this.makeTextStyle(mainFont, 14, 400, '1.5', '0');
+    textStyles.caption ??= this.makeTextStyle(mainFont, 12, 400, '1.4', '0.025em');
+    textStyles.overline ??= this.makeTextStyle(mainFont, 12, 600, '1.2', '0.05em');
+    textStyles.button ??= this.makeTextStyle(mainFont, 16, 600, '1', '0');
+
+    if (!textStyles.h1 && fontUsages.length > 0) {
+      const largest = fontUsages[0];
+      const h1Size = largest.size >= 36 ? largest.size : Math.min(largest.size * 2, 72);
+      textStyles.h1 = this.makeTextStyle(mainFont, h1Size, largest.weight, '1.2', '-0.02em');
+      textStyles.body = this.makeTextStyle(mainFont,
+        this.getMostCommonSize(fontUsages.flatMap(f => [f.size])),
+        this.getMostCommonWeight(fontUsages.flatMap(f => [f.weight])),
+        '1.6', '0',
+      );
+    }
 
     return {
       fontFamilies: {
@@ -337,16 +349,15 @@ export class TokenExtractor {
     };
   }
 
-  // ── Spacing Scanning ────────────────────────────────
 
   private scanSpacingValues(nodes: SceneNode[]): number[] {
     const values: number[] = [];
     for (const node of nodes) {
-      if (node.paddingTop) values.push(node.paddingTop);
-      if (node.paddingRight) values.push(node.paddingRight);
-      if (node.paddingBottom) values.push(node.paddingBottom);
-      if (node.paddingLeft) values.push(node.paddingLeft);
-      if (node.itemSpacing) values.push(node.itemSpacing);
+      if (node.paddingTop != null) values.push(node.paddingTop);
+      if (node.paddingRight != null) values.push(node.paddingRight);
+      if (node.paddingBottom != null) values.push(node.paddingBottom);
+      if (node.paddingLeft != null) values.push(node.paddingLeft);
+      if (node.itemSpacing != null) values.push(node.itemSpacing);
     }
     return [...new Set(values)].sort((a, b) => a - b);
   }
@@ -377,18 +388,12 @@ export class TokenExtractor {
     };
   }
 
-  // ── Border Radius Scanning ──────────────────────────
 
   private scanBorderRadii(nodes: SceneNode[]): number[] {
     const values: number[] = [];
     for (const node of nodes) {
       if (node.cornerRadius && typeof node.cornerRadius === 'number') {
         values.push(node.cornerRadius);
-      }
-      if (node.type === 'RECTANGLE' || node.type === 'FRAME' || node.type === 'COMPONENT') {
-        if (node.cornerRadius && typeof node.cornerRadius === 'number') {
-          values.push(node.cornerRadius);
-        }
       }
     }
     return [...new Set(values)].sort((a, b) => a - b);
@@ -416,10 +421,10 @@ export class TokenExtractor {
     };
   }
 
-  // ── Shadows from Effects ────────────────────────────
 
   private generateShadows(nodes: SceneNode[], _styles?: FigmaStyles): Record<string, string> {
     const shadows: Record<string, string> = { none: 'none' };
+    const dedup = new Set<string>();
 
     for (const node of nodes) {
       if (node.effects) {
@@ -432,6 +437,9 @@ export class TokenExtractor {
             const spread = effect.spread ?? 0;
             const prefix = effect.type === 'INNER_SHADOW' ? 'inset ' : '';
             const cssShadow = `${prefix}${offsetX}px ${offsetY}px ${blur}px ${spread}px ${color}`;
+
+            if (dedup.has(cssShadow)) continue;
+            dedup.add(cssShadow);
 
             if (!shadows['from-figma']) {
               shadows['from-figma'] = cssShadow;
@@ -459,7 +467,6 @@ export class TokenExtractor {
     };
   }
 
-  // ── Helper Methods ──────────────────────────────────
 
   private rgbToHex(color: Color): string {
     const r = Math.round(color.r * 255);
@@ -506,9 +513,9 @@ export class TokenExtractor {
     return match?.[1] ?? null;
   }
 
-  private makeTextStyle(fontSize: number, fontWeight: number, lineHeight: string, letterSpacing: string) {
+  private makeTextStyle(fontFamily: string, fontSize: number, fontWeight: number, lineHeight: string, letterSpacing: string) {
     return {
-      fontFamily: 'Inter',
+      fontFamily,
       fontSize: `${fontSize}px`,
       fontWeight,
       lineHeight,

@@ -93,7 +93,7 @@ export class LayoutEngine {
     const children = this.computeChildrenLayout(node);
 
     // Try grid inference for absolute-positioned children without auto-layout
-    if ((!node.layoutMode || node.layoutMode === 'NONE') && node.children && node.children.length >= 4) {
+    if ((!node.layoutMode || node.layoutMode === 'NONE') && node.children && node.children.length >= 3) {
       const gridInfo = this.detectGrid(node);
       if (gridInfo && gridInfo.isGrid && gridInfo.confidence >= 0.6) {
         self.display = 'grid';
@@ -105,7 +105,6 @@ export class LayoutEngine {
             ? `${gridInfo.gap.row}px ${gridInfo.gap.column}px`
             : `${gridInfo.gap.column}px`;
         }
-        // Update children with grid positions
         for (const pos of gridInfo.childPositions) {
           const childIndex = node.children?.findIndex(c => c.id === pos.nodeId);
           if (childIndex !== undefined && childIndex >= 0 && childIndex < children.length) {
@@ -125,6 +124,25 @@ export class LayoutEngine {
             } else {
               childCSS.gridRow = `${pos.row + 1}`;
             }
+          }
+        }
+      }
+    }
+
+    // Handle Figma's layoutGrids property (column/row grids)
+    if (node.layoutGrids && node.layoutGrids.length > 0 && self.display !== 'grid') {
+      const layoutGrid = node.layoutGrids[0];
+      if (layoutGrid.pattern === 'COLUMNS' || layoutGrid.pattern === 'ROWS') {
+        const count = layoutGrid.count ?? 12;
+        const gutter = layoutGrid.gutterSize ?? 0;
+        if (layoutGrid.pattern === 'COLUMNS') {
+          self.display = 'grid';
+          self.gridTemplateColumns = `repeat(${count}, 1fr)`;
+          if (gutter > 0) {
+            self.gap = `${gutter}px`;
+          }
+          if (layoutGrid.alignment === 'CENTER') {
+            self.justifyContent = 'center';
           }
         }
       }
@@ -157,7 +175,7 @@ export class LayoutEngine {
       css.position = 'relative';
     }
 
-    if (node.layoutMode === 'NONE' || !node.layoutMode) {
+    if (!node.layoutMode || node.layoutMode === 'NONE') {
       if (node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'INSTANCE' || node.type === 'GROUP') {
         if (css.position !== 'absolute') {
           if (node.clipsContent) {
@@ -177,10 +195,10 @@ export class LayoutEngine {
       if (node.counterAxisAlignItems && node.counterAxisAlignItems !== 'MIN') {
         css.alignItems = this.mapCounterAlign(node.counterAxisAlignItems);
       }
-      if (node.itemSpacing && node.itemSpacing > 0) {
+      if (node.itemSpacing != null && node.itemSpacing > 0) {
         css.gap = `${node.itemSpacing}px`;
       }
-      if (node.paddingTop || node.paddingRight || node.paddingBottom || node.paddingLeft) {
+      if (node.paddingTop != null || node.paddingRight != null || node.paddingBottom != null || node.paddingLeft != null) {
         css.padding = [
           node.paddingTop ?? 0,
           node.paddingRight ?? 0,
@@ -229,6 +247,18 @@ export class LayoutEngine {
         css.objectFit = 'cover';
         if (box) {
           css.aspectRatio = `${box.width} / ${box.height}`;
+        }
+      }
+    }
+
+    // Handle blur effects
+    if (node.effects) {
+      for (const effect of node.effects) {
+        if (effect.visible === false) continue;
+        if (effect.type === 'LAYER_BLUR' && effect.radius && effect.radius > 0) {
+          // Layer blur is handled via CSS filter
+        } else if (effect.type === 'BACKGROUND_BLUR' && effect.radius && effect.radius > 0) {
+          // Backdrop blur
         }
       }
     }
@@ -295,6 +325,7 @@ export class LayoutEngine {
   private isAbsoluteChild(node: SceneNode, parent?: SceneNode): boolean {
     if (!parent || !node.absoluteBoundingBox || !parent.absoluteBoundingBox) return false;
     if (parent.layoutMode === 'NONE' || !parent.layoutMode) return false;
+    if (node.layoutPositioning === 'ABSOLUTE') return true;
     const pBox = parent.absoluteBoundingBox;
     const cBox = node.absoluteBoundingBox;
     return (
@@ -305,7 +336,6 @@ export class LayoutEngine {
     );
   }
 
-  // ── Responsive / Constraints Analysis ─────────────────
 
   analyzeResponsive(node: SceneNode): ResponsiveInfo {
     const constraints = this.analyzeConstraints(node);
@@ -356,10 +386,9 @@ export class LayoutEngine {
       const childCount = node.children?.filter(c => c.visible !== false).length ?? 0;
 
       // Detect if horizontal layout would need to wrap on smaller screens
-      if (node.layoutMode === 'HORIZONTAL' && node.itemSpacing && childCount > 1) {
+      if (node.layoutMode === 'HORIZONTAL' && node.itemSpacing != null && childCount > 1) {
         const totalChildWidth = this.estimateTotalChildWidth(node);
         if (totalChildWidth > baseWidth * 0.7) {
-          // Suggest tablet breakpoint: wrap
           variants.push({
             breakpoint: 'tablet',
             minWidth: 0,
@@ -390,8 +419,8 @@ export class LayoutEngine {
 
     // Padding reduction variants
     const hasLargePadding =
-      (node.paddingLeft ?? 0) > 40 ||
-      (node.paddingRight ?? 0) > 40;
+      (node.paddingLeft != null && node.paddingLeft > 40) ||
+      (node.paddingRight != null && node.paddingRight > 40);
 
     if (hasLargePadding) {
       const reducePadding = (factor: number) => ({
@@ -425,10 +454,9 @@ export class LayoutEngine {
     return variants;
   }
 
-  // ── Grid Detection from Absolute Positions ───────────────
 
   detectGrid(node: SceneNode): GridInfo | null {
-    if (!node.children || node.children.length < 4) return null;
+    if (!node.children || node.children.length < 3) return null;
     if (node.layoutMode && node.layoutMode !== 'NONE') return null;
 
     const parentBox = node.absoluteBoundingBox;
@@ -437,21 +465,18 @@ export class LayoutEngine {
     const visible = node.children.filter(c =>
       c.visible !== false && c.absoluteBoundingBox
     );
-    if (visible.length < 4) return null;
+    if (visible.length < 3) return null;
 
     const boxes = visible.map(c => c.absoluteBoundingBox!);
 
-    // Get x,y positions relative to parent
     const xPositions = boxes.map(b => Math.round((b.x - parentBox.x) * 10) / 10);
     const yPositions = boxes.map(b => Math.round((b.y - parentBox.y) * 10) / 10);
     const widths = boxes.map(b => Math.round(b.width * 10) / 10);
     const heights = boxes.map(b => Math.round(b.height * 10) / 10);
 
-    // Cluster by Y to detect rows, then by X within each row to detect columns
     const rowClusters = this.clusterValues(yPositions, Math.max(5, Math.min(...heights) * 0.3));
     if (rowClusters.length < 2) return null;
 
-    // For each row cluster, cluster X values to detect columns
     const colSets: number[][] = [];
     for (const row of rowClusters) {
       const rowX = row.indices.map(i => xPositions[i]);
@@ -460,7 +485,6 @@ export class LayoutEngine {
       colSets.push(colPositions);
     }
 
-    // Check if column structure is consistent across rows
     const colCounts = colSets.map(s => s.length);
     const medianColCount = this.median(colCounts);
     const consistentRows = colCounts.filter(c => Math.abs(c - medianColCount) <= 1).length;
@@ -468,17 +492,14 @@ export class LayoutEngine {
 
     if (consistencyRatio < 0.5 || medianColCount < 2) return null;
 
-    // Build unified column positions by intersecting all row column sets
     const allColPositions = [...new Set(colSets.flat().map(v => Math.round(v)))].sort((a, b) => a - b);
 
-    // Cluster into final column count
     const finalColClusters = this.clusterValues(allColPositions, Math.max(5, Math.min(...widths) * 0.3));
     if (finalColClusters.length < 2) return null;
 
     const finalColPositions = finalColClusters.map(c => c.value);
     const finalRowPositions = rowClusters.map(r => r.value);
 
-    // Compute template column widths
     const templateColumns = finalColPositions.map((cx, ci) => {
       const nextX = finalColPositions[ci + 1] ?? (parentBox.width);
       const colWidth = nextX - cx;
@@ -492,17 +513,14 @@ export class LayoutEngine {
       return `${Math.round(avgWidth)}px`;
     });
 
-    // Compute template row heights
     const templateRows = finalRowPositions.map((ry, ri) => {
       const nextY = finalRowPositions[ri + 1] ?? parentBox.height;
       const rowHeight = nextY - ry;
       return `${Math.round(rowHeight)}px`;
     });
 
-    // Compute gap
     let gapCol = 0;
     if (finalColPositions.length >= 2) {
-      // Estimate gap from the margin between children
       const colGaps: number[] = [];
       for (const row of rowClusters) {
         const rowChildren = row.indices
@@ -532,7 +550,6 @@ export class LayoutEngine {
       gapRow = rowGaps.length > 0 ? Math.round(rowGaps.reduce((s, g) => s + g, 0) / rowGaps.length) : 0;
     }
 
-    // Assign child positions
     const childPositions: GridChildPosition[] = visible.map((child, vi) => {
       const cx = xPositions[vi];
       const cy = yPositions[vi];

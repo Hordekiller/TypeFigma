@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { TailwindV4Generator } from '../tailwind-generator.js';
-import type { ExtractedTokens, FigmaAnalysis } from '@typefigma/analyzer';
+import type { ExtractedTokens } from '@typefigma/analyzer';
 
 const mockTokens: ExtractedTokens = {
   colors: { primary: { '500': '#3b82f6', '700': '#1d4ed8' }, secondary: { '500': '#22c55e' }, accent: { '500': '#f59e0b' }, neutral: { '50': '#fafafa', '500': '#737373', '900': '#171717' }, success: { '500': '#22c55e' }, warning: { '500': '#eab308' }, error: { '500': '#ef4444' }, info: { '500': '#3b82f6' }, background: { body: '#ffffff', surface: '#fafafa', overlay: '#0000004d' }, text: { primary: '#171717', secondary: '#737373', disabled: '#a3a3a3', inverse: '#ffffff' }, border: { default: '#e5e5e5', hover: '#d4d4d4', focus: '#3b82f6' } },
@@ -15,6 +15,8 @@ const mockTokens: ExtractedTokens = {
     bodyLarge: { fontFamily: 'Inter', fontSize: '1.125rem', fontWeight: 400, lineHeight: '1.5', letterSpacing: '0' },
     bodySmall: { fontFamily: 'Inter', fontSize: '0.875rem', fontWeight: 400, lineHeight: '1.5', letterSpacing: '0' },
     caption: { fontFamily: 'Inter', fontSize: '0.75rem', fontWeight: 400, lineHeight: '1.5', letterSpacing: '0' },
+    overline: { fontFamily: 'Inter', fontSize: '0.75rem', fontWeight: 500, lineHeight: '1.5', letterSpacing: '0.05em', textTransform: 'uppercase' },
+    button: { fontFamily: 'Inter', fontSize: '0.875rem', fontWeight: 600, lineHeight: '1.5', letterSpacing: '0' },
   } },
   spacing: { '0': '0', '1': '0.25rem', '4': '1rem', '8': '2rem', '16': '4rem' },
   sizing: { full: '100%', auto: 'auto' },
@@ -56,7 +58,7 @@ describe('TailwindV4Generator', () => {
   });
 
   it('should handle empty color tokens', () => {
-    const gen = new TailwindV4Generator({ ...mockTokens, colors: { primary: {}, secondary: {}, accent: {}, neutral: {}, success: {}, warning: {}, error: {}, info: {}, background: {}, text: {}, border: {} } });
+    const gen = new TailwindV4Generator({ ...mockTokens, colors: { primary: {}, secondary: {}, accent: {}, neutral: {}, success: {}, warning: {}, error: {}, info: {}, background: { body: '#fff', surface: '#fff', overlay: '#000' }, text: { primary: '#000', secondary: '#666', disabled: '#999', inverse: '#fff' }, border: { default: '#ccc', hover: '#bbb', focus: '#333' } } });
     const css = gen.generateThemeCSS();
     expect(css).toContain('@import "tailwindcss"');
   });
@@ -79,7 +81,7 @@ describe('TailwindV4Generator', () => {
   it('should handle minimal tokens', () => {
     const gen = new TailwindV4Generator({
       colors: mockTokens.colors,
-      typography: { fontFamilies: { heading: { name: 'Inter', weights: [400], fallback: 'sans-serif' }, body: { name: 'Inter', weights: [400], fallback: 'sans-serif' } }, fontSizes: {}, fontWeights: {}, lineHeights: {}, letterSpacing: {}, textStyles: {} },
+      typography: { fontFamilies: { heading: { name: 'Inter', weights: [400], fallback: 'sans-serif' }, body: { name: 'Inter', weights: [400], fallback: 'sans-serif' } }, fontSizes: {}, fontWeights: {}, lineHeights: {}, letterSpacing: {}, textStyles: undefined as any },
       spacing: {},
       sizing: {},
       borderRadius: {},

@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { HtmlGenerator } from '../html-generator.js';
-import type { ComponentClassification, ExtractedTokens, ExtractedContent } from '@typefigma/analyzer';
+import type { ComponentClassification, ExtractedTokens } from '@typefigma/analyzer';
 
 const mockComponents: ComponentClassification = {
   headers: [{ id: 'h1', figmaNodeId: 'h1', name: 'Header', confidence: 0.95, type: 'sticky', hasLogo: true, hasMenu: true, hasSearch: false, hasCTA: true, layout: { alignment: 'space-between', height: '80px', padding: { top: '1rem', right: '2rem', bottom: '1rem', left: '2rem' } } }],
-  footers: [{ id: 'f1', figmaNodeId: 'f1', name: 'Footer', confidence: 0.9, type: 'multi-column', columns: 4, hasNewsletter: true, hasSocialLinks: true, hasCopyright: true, layout: { width: 'full', padding: { top: '3rem', right: '2rem', bottom: '1.5rem', left: '2rem' } } }],
+  footers: [{ id: 'f1', figmaNodeId: 'f1', name: 'Footer', confidence: 0.9, columns: 4, hasNewsletter: true, hasSocial: true, hasMenu: true }],
   navigation: [],
-  heroes: [{ id: 'hero1', figmaNodeId: 'hero1', name: 'Hero Section', confidence: 0.85, type: 'centered', hasHeadline: true, hasSubtext: true, hasCTA: true, hasImage: false, hasBadge: false, alignment: 'center', layout: { minHeight: '500px', maxWidth: '1200px', padding: { top: '4rem', right: '2rem', bottom: '4rem', left: '2rem' } } }],
+  heroes: [{ id: 'hero1', figmaNodeId: 'hero1', name: 'Hero Section', confidence: 0.85, layout: 'centered', hasVideo: false, hasSlider: false, hasOverlay: false, content: { hasHeadline: true, hasSubtext: true, hasButtons: true, hasImage: false } }],
   ctaSections: [],
   testimonials: [],
   galleries: [],
@@ -37,6 +37,8 @@ const mockTokens: ExtractedTokens = {
     bodyLarge: { fontFamily: 'Inter', fontSize: '1.125rem', fontWeight: 400, lineHeight: '1.5', letterSpacing: '0' },
     bodySmall: { fontFamily: 'Inter', fontSize: '0.875rem', fontWeight: 400, lineHeight: '1.5', letterSpacing: '0' },
     caption: { fontFamily: 'Inter', fontSize: '0.75rem', fontWeight: 400, lineHeight: '1.5', letterSpacing: '0' },
+    overline: { fontFamily: 'Inter', fontSize: '0.75rem', fontWeight: 500, lineHeight: '1.5', letterSpacing: '0.05em', textTransform: 'uppercase' },
+    button: { fontFamily: 'Inter', fontSize: '0.875rem', fontWeight: 600, lineHeight: '1.5', letterSpacing: '0' },
   } },
   spacing: { '0': '0', '4': '1rem', '8': '2rem' },
   sizing: { full: '100%', auto: 'auto', container: '1200px' },
@@ -106,7 +108,6 @@ describe('HtmlGenerator', () => {
       ...mockComponents,
       productCards: [{
         id: 'pc1', figmaNodeId: 'pc1', name: 'Product Card', confidence: 0.9,
-        type: 'grid',
         structure: {
           productImage: { nodeId: 'img1', aspectRatio: '1/1', hasBorderRadius: true, hasHoverEffect: true },
           productBadge: { nodeId: 'badge1', position: 'top-right' as const, text: 'Sale' },
@@ -116,6 +117,7 @@ describe('HtmlGenerator', () => {
           shortDescription: { nodeId: 'desc1', maxLength: 100 },
           addToCartButton: { nodeId: 'atc1', text: 'Add to Cart' },
         },
+        layout: { type: 'card' as const, alignment: 'left' as const, spacing: { top: '0', right: '0', bottom: '0', left: '0' }, containerPadding: { top: '0', right: '0', bottom: '0', left: '0' } },
       }],
     };
     const html = gen.generatePage(withProducts, ecomTokens);

@@ -12,9 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "dependencies": {
-  },
   "devDependencies": {
+    "@figma/rest-api-spec": "0.41.0",
     "typescript": "^5.5.0",
     "vitest": "4.1.9"
   }

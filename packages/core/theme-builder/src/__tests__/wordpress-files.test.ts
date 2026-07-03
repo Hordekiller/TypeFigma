@@ -18,7 +18,7 @@ const mockAnalysis: FigmaAnalysis = {
   pages: [{ id: '1', name: 'Home', nodes: [] }],
   components: {
     headers: [{ id: 'h1', figmaNodeId: 'h1', name: 'Header', confidence: 0.9, type: 'sticky', hasLogo: true, hasMenu: true, hasSearch: false, hasCTA: true, layout: { alignment: 'space-between', height: '80px', padding: { top: '1rem', right: '2rem', bottom: '1rem', left: '2rem' } } }],
-    footers: [{ id: 'f1', figmaNodeId: 'f1', name: 'Footer', confidence: 0.9, type: 'multi-column', columns: 4, hasNewsletter: true, hasSocialLinks: true, hasCopyright: true, layout: { width: 'full', padding: { top: '3rem', right: '2rem', bottom: '1.5rem', left: '2rem' } } }],
+    footers: [{ id: 'f1', figmaNodeId: 'f1', name: 'Footer', confidence: 0.9, columns: 4, hasNewsletter: true, hasSocial: true, hasMenu: true }],
     navigation: [], heroes: [], ctaSections: [], testimonials: [], galleries: [],
     productCards: [], productDetails: [], cartComponents: [], checkoutComponents: [],
     postCards: [], postDetail: [], contactForms: [], searchBars: [], newsletters: [],
@@ -37,6 +37,8 @@ const mockAnalysis: FigmaAnalysis = {
       bodyLarge: { fontFamily: 'Inter', fontSize: '1.125rem', fontWeight: 400, lineHeight: '1.5', letterSpacing: '0' },
       bodySmall: { fontFamily: 'Inter', fontSize: '0.875rem', fontWeight: 400, lineHeight: '1.5', letterSpacing: '0' },
       caption: { fontFamily: 'Inter', fontSize: '0.75rem', fontWeight: 400, lineHeight: '1.5', letterSpacing: '0' },
+      overline: { fontFamily: 'Inter', fontSize: '0.75rem', fontWeight: 500, lineHeight: '1.5', letterSpacing: '0.05em', textTransform: 'uppercase' },
+      button: { fontFamily: 'Inter', fontSize: '0.875rem', fontWeight: 600, lineHeight: '1.5', letterSpacing: '0' },
     } },
     spacing: { '0': '0', '4': '1rem' },
     sizing: { full: '100%', auto: 'auto' },
@@ -145,7 +147,7 @@ describe('WordPressFileBuilder', () => {
   it('should generate all files in getAllFiles', () => {
     const files = builder.getAllFiles(
       [{ type: 'header', title: 'Header', content: [], page_settings: {} }],
-      { colors: [], typography: '{"fontFamilies":[]}', breakpoints: {} },
+      { settings: { color: {}, typography: {} } },
       mockGeneratedCode,
     );
     expect(files.length).toBeGreaterThan(20);
@@ -181,5 +183,32 @@ describe('WordPressFileBuilder', () => {
     expect(xml).toContain('<?xml version="1.0"');
     expect(xml).not.toContain('_regular_price');
     expect(xml).not.toContain('product_cat');
+  });
+
+  it('should build readme.txt with theme info', () => {
+    const readme = builder.buildReadmeTxt();
+    expect(readme).toContain('=== Test Theme ===');
+    expect(readme).toContain('Contributors: typefigma');
+    expect(readme).toContain('License: GPLv2 or later');
+    expect(readme).toContain('== Description ==');
+    expect(readme).toContain('WooCommerce');
+    expect(readme).toContain('== Changelog ==');
+  });
+
+  it('should build robots.txt', () => {
+    const robots = builder.buildRobotsTxt();
+    expect(robots).toContain('User-agent: *');
+    expect(robots).toContain('Allow: /');
+    expect(robots).toContain('Disallow: /wp-admin/');
+  });
+
+  it('should include readme.txt and robots.txt in getAllFiles', () => {
+    const files = builder.getAllFiles(
+      [{ type: 'header', title: 'Header', content: [], page_settings: {} }],
+      { settings: { color: {}, typography: {} } },
+      mockGeneratedCode,
+    );
+    expect(files.some(f => f.path === 'readme.txt')).toBe(true);
+    expect(files.some(f => f.path === 'robots.txt')).toBe(true);
   });
 });

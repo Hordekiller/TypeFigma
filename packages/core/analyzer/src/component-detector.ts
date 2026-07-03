@@ -58,21 +58,39 @@ export class ComponentDetector {
   } {
     const allPages = file.document.children ?? [];
     const allNodes: SceneNode[] = [];
+    const nodeParentMap = new Map<string, SceneNode | null>();
 
     for (const page of allPages) {
       if (page.children) {
-        allNodes.push(...page.children);
+        for (const child of page.children) {
+          allNodes.push(child);
+          nodeParentMap.set(child.id, null);
+          this.collectDescendants(child, allNodes, nodeParentMap);
+        }
       }
     }
 
-    const analyzed = allNodes.map(n => this.analyzeNode(n));
+    const analyzed = allNodes.map(n => this.analyzeNode(n, nodeParentMap.get(n.id) ?? undefined));
     const components = this.classifyAll(allNodes, analyzed);
     const projectType = this.detectProjectType(allNodes, components);
 
     return { projectType, components };
   }
 
-  private analyzeNode(node: SceneNode, depth: number = 0): NodeAnalysis {
+  private collectDescendants(
+    node: SceneNode,
+    allNodes: SceneNode[],
+    parentMap: Map<string, SceneNode | null>,
+  ): void {
+    if (!node.children) return;
+    for (const child of node.children) {
+      allNodes.push(child);
+      parentMap.set(child.id, node);
+      this.collectDescendants(child, allNodes, parentMap);
+    }
+  }
+
+  private analyzeNode(node: SceneNode, parent?: SceneNode, depth: number = 0): NodeAnalysis {
     const children = node.children ?? [];
     const box = node.absoluteBoundingBox;
 
@@ -100,7 +118,22 @@ export class ComponentDetector {
           else if (typeof child.cornerRadius === 'number' && child.cornerRadius > 0) buttonCount++;
           else shapeCount++;
           break;
+        case 'ELLIPSE':
+        case 'LINE':
+        case 'POLYGON':
+        case 'STAR':
+        case 'REGULAR_POLYGON':
+          shapeCount++;
+          break;
         case 'VECTOR': iconCount++; break;
+        case 'BOOLEAN_OPERATION': shapeCount++; break;
+        case 'COMPONENT_SET':
+          frameCount++;
+          if (name.includes('icon') || name.includes('svg')) iconCount++;
+          break;
+        case 'MEDIA':
+          imageCount++;
+          break;
         case 'FRAME':
         case 'COMPONENT':
         case 'INSTANCE':
@@ -110,6 +143,16 @@ export class ComponentDetector {
           if (name.includes('image') || name.includes('photo') || name.includes('img')) imageCount++;
           if (name.includes('input') || name.includes('field') || name.includes('search')) inputCount++;
           if (name.includes('link') || name.includes('nav')) linkCount++;
+          break;
+        case 'SECTION': frameCount++; break;
+        case 'TABLE': frameCount++; break;
+        case 'STICKY':
+        case 'SHAPE_WITH_TEXT':
+        case 'CONNECTOR':
+        case 'WASHI_TAPE':
+        case 'EMBED':
+        case 'LINK_UNFURL':
+          shapeCount++;
           break;
       }
     }
@@ -121,7 +164,11 @@ export class ComponentDetector {
       ? children.reduce((s, c) => s + (c.absoluteBoundingBox?.height ?? 0), 0) / children.length
       : 0;
 
-    const layoutCss = this.layoutEngine.computeLayout(node).self;
+    const layoutCss = this.layoutEngine.computeLayout(node, parent).self;
+
+    const gridInfo = (node.layoutMode === 'NONE' || !node.layoutMode) && node.children && node.children.length >= 4
+      ? this.layoutEngine.detectGrid(node)
+      : null;
 
     return {
       node,
@@ -132,7 +179,7 @@ export class ComponentDetector {
       hasAutoLayout: node.layoutMode !== undefined && node.layoutMode !== 'NONE',
       isHorizontal: node.layoutMode === 'HORIZONTAL',
       isVertical: node.layoutMode === 'VERTICAL',
-      hasGrid: false,
+      hasGrid: gridInfo !== null && gridInfo.isGrid && gridInfo.confidence >= 0.5,
       avgChildWidth, avgChildHeight,
       childTypes,
       childNameWords,
@@ -150,51 +197,54 @@ export class ComponentDetector {
       sections: [], containers: [], columns: [],
     };
 
+    const processedIds = new Set<string>();
+
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i];
       const analysis = analyzed[i];
       if (!analysis.box) continue;
+      if (processedIds.has(node.id)) continue;
 
       const name = node.name.toLowerCase();
 
       const headerCheck = this.detectHeader(node, analysis, name);
-      if (headerCheck) { all.headers.push(headerCheck); continue; }
+      if (headerCheck) { all.headers.push(headerCheck); processedIds.add(node.id); continue; }
 
       const footerCheck = this.detectFooter(node, analysis, name);
-      if (footerCheck) { all.footers.push(footerCheck); continue; }
+      if (footerCheck) { all.footers.push(footerCheck); processedIds.add(node.id); continue; }
 
       const navCheck = this.detectNavigation(node, analysis, name);
-      if (navCheck) { all.navigation.push(navCheck); continue; }
+      if (navCheck) { all.navigation.push(navCheck); processedIds.add(node.id); continue; }
 
       const heroCheck = this.detectHero(node, analysis, name);
-      if (heroCheck) { all.heroes.push(heroCheck); continue; }
+      if (heroCheck) { all.heroes.push(heroCheck); processedIds.add(node.id); continue; }
 
       const productCardCheck = this.detectProductCard(node, analysis, name);
-      if (productCardCheck) { all.productCards.push(productCardCheck); continue; }
+      if (productCardCheck) { all.productCards.push(productCardCheck); processedIds.add(node.id); continue; }
 
       const productDetailCheck = this.detectProductDetail(node, analysis, name);
-      if (productDetailCheck) { all.productDetails.push(productDetailCheck); continue; }
+      if (productDetailCheck) { all.productDetails.push(productDetailCheck); processedIds.add(node.id); continue; }
 
       const ctaCheck = this.detectCTA(node, analysis, name);
-      if (ctaCheck) { all.ctaSections.push(ctaCheck); continue; }
+      if (ctaCheck) { all.ctaSections.push(ctaCheck); processedIds.add(node.id); continue; }
 
       const testimonialCheck = this.detectTestimonial(node, analysis, name);
-      if (testimonialCheck) { all.testimonials.push(testimonialCheck); continue; }
+      if (testimonialCheck) { all.testimonials.push(testimonialCheck); processedIds.add(node.id); continue; }
 
       const galleryCheck = this.detectGallery(node, analysis, name);
-      if (galleryCheck) { all.galleries.push(galleryCheck); continue; }
+      if (galleryCheck) { all.galleries.push(galleryCheck); processedIds.add(node.id); continue; }
 
       const cartCheck = this.detectCart(node, analysis, name);
-      if (cartCheck) { all.cartComponents.push(cartCheck); continue; }
+      if (cartCheck) { all.cartComponents.push(cartCheck); processedIds.add(node.id); continue; }
 
       const checkoutCheck = this.detectCheckout(node, analysis, name);
-      if (checkoutCheck) { all.checkoutComponents.push(checkoutCheck); continue; }
+      if (checkoutCheck) { all.checkoutComponents.push(checkoutCheck); processedIds.add(node.id); continue; }
 
       const postCardCheck = this.detectPostCard(node, analysis, name);
-      if (postCardCheck) { all.postCards.push(postCardCheck); continue; }
+      if (postCardCheck) { all.postCards.push(postCardCheck); processedIds.add(node.id); continue; }
 
       const postDetailCheck = this.detectPostDetail(node, analysis, name);
-      if (postDetailCheck) { all.postDetail.push(postDetailCheck); continue; }
+      if (postDetailCheck) { all.postDetail.push(postDetailCheck); processedIds.add(node.id); continue; }
 
       const formCheck = this.detectForm(node, analysis, name);
       if (formCheck) {
@@ -211,23 +261,26 @@ export class ComponentDetector {
         } else {
           all.contactForms.push(formCheck);
         }
+        processedIds.add(node.id);
         continue;
       }
 
       const containerCheck = this.detectContainer(node, analysis, name);
       if (containerCheck) {
         all.containers.push(containerCheck);
+        processedIds.add(node.id);
+        continue;
       }
 
-      if (node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'INSTANCE') {
+      if (node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'INSTANCE' || node.type === 'SECTION') {
         all.sections.push(this.buildSection(node, name, analysis));
+        processedIds.add(node.id);
       }
     }
 
     return all;
   }
 
-  // ── Structural Detection ────────────────────────────
 
   private detectHeader(node: SceneNode, analysis: NodeAnalysis, name: string): HeaderComponent | null {
     const box = analysis.box!;
@@ -393,46 +446,46 @@ export class ComponentDetector {
       confidence,
       structure: {
         productImage: {
-          nodeId: this.findChildByPattern(node, /image|photo|img/i)?.id ?? `${node.id}_img`,
+          nodeId: this.findDescendant(node, /image|photo|img/i)?.id ?? `${node.id}_img`,
           aspectRatio: '1 / 1',
           hasBorderRadius: true,
           hasHoverEffect: true,
         },
         productBadge: /sale|new|badge|offer/i.test(allText) ? {
-          nodeId: this.findChildByPattern(node, /badge|sale|tag|offer/i)?.id ?? `${node.id}_badge`,
+          nodeId: this.findDescendant(node, /badge|sale|tag|offer/i)?.id ?? `${node.id}_badge`,
           position: 'top-right',
           text: 'Sale',
         } : undefined,
         productTitle: {
-          nodeId: this.findChildByPattern(node, /title|name|heading/i)?.id ?? `${node.id}_title`,
+          nodeId: this.findDescendant(node, /title|name|heading/i)?.id ?? `${node.id}_title`,
           maxLines: 2,
         },
         productPrice: {
-          nodeId: this.findChildByPattern(node, /price|\$|€|£/i)?.id ?? `${node.id}_price`,
+          nodeId: this.findDescendant(node, /price|\$|€|£/i)?.id ?? `${node.id}_price`,
           format: /sale|off|discount/i.test(allText) ? 'sale' : 'regular',
           hasCurrency: /\$|€|£|تومان/i.test(allText),
         },
         productRating: hasRating ? {
-          nodeId: this.findChildByPattern(node, /rating|star/i)?.id ?? `${node.id}_rating`,
+          nodeId: this.findDescendant(node, /rating|star/i)?.id ?? `${node.id}_rating`,
           style: 'stars',
         } : undefined,
         shortDescription: analysis.textCount > 2 ? {
-          nodeId: this.findChildByPattern(node, /desc|excerpt|text/i)?.id ?? `${node.id}_desc`,
+          nodeId: this.findDescendant(node, /desc|excerpt|text/i)?.id ?? `${node.id}_desc`,
           maxLength: 100,
         } : undefined,
         addToCartButton: {
-          nodeId: this.findChildByPattern(node, /cart|buy|add/i)?.id ?? `${node.id}_atc`,
+          nodeId: this.findDescendant(node, /cart|buy|add/i)?.id ?? `${node.id}_atc`,
           text: 'Add to Cart',
         },
         quickViewButton: /quick.?view|eye/i.test(allText) ? {
-          nodeId: this.findChildByPattern(node, /quick.?view|eye/i)?.id ?? `${node.id}_qv`,
+          nodeId: this.findDescendant(node, /quick.?view|eye/i)?.id ?? `${node.id}_qv`,
         } : undefined,
         wishlistButton: /wishlist|heart|favorite/i.test(allText) ? {
-          nodeId: this.findChildByPattern(node, /wishlist|heart/i)?.id ?? `${node.id}_wl`,
+          nodeId: this.findDescendant(node, /wishlist|heart/i)?.id ?? `${node.id}_wl`,
           position: { x: 8, y: 8 },
         } : undefined,
         compareButton: /compare/i.test(allText) ? {
-          nodeId: this.findChildByPattern(node, /compare/i)?.id ?? `${node.id}_cmp`,
+          nodeId: this.findDescendant(node, /compare/i)?.id ?? `${node.id}_cmp`,
         } : undefined,
       },
       layout: {
@@ -463,7 +516,7 @@ export class ComponentDetector {
       layout: name.includes('sidebar') ? 'sidebar-right' : 'fullwidth',
       sections: {
         productGallery: {
-          nodeId: this.findChildByPattern(node, /gallery|image|photo|slider/i)?.id ?? `${node.id}_gallery`,
+          nodeId: this.findDescendant(node, /gallery|image|photo|slider/i)?.id ?? `${node.id}_gallery`,
           type: 'thumbnails-bottom',
           hasZoom: true, hasLightbox: true,
         },
@@ -723,7 +776,7 @@ export class ComponentDetector {
         figmaNodeId: node.id,
         type: 'flex',
         direction: analysis.isHorizontal ? 'row' : 'column',
-        gap: node.itemSpacing ? `${node.itemSpacing}px` : undefined,
+        gap: node.itemSpacing != null ? `${node.itemSpacing}px` : undefined,
       };
     }
     return null;
@@ -736,14 +789,15 @@ export class ComponentDetector {
       name: node.name,
       type: this.detectSectionType(name),
       confidence: analysis.hasAutoLayout ? 0.75 : 0.5,
+      hasGrid: analysis.hasGrid,
       layout: {
         fullWidth: !name.includes('container'),
         hasContainer: true,
         padding: {
-          top: node.paddingTop ? `${node.paddingTop}px` : '0',
-          right: node.paddingRight ? `${node.paddingRight}px` : '0',
-          bottom: node.paddingBottom ? `${node.paddingBottom}px` : '0',
-          left: node.paddingLeft ? `${node.paddingLeft}px` : '0',
+          top: node.paddingTop != null ? `${node.paddingTop}px` : '0',
+          right: node.paddingRight != null ? `${node.paddingRight}px` : '0',
+          bottom: node.paddingBottom != null ? `${node.paddingBottom}px` : '0',
+          left: node.paddingLeft != null ? `${node.paddingLeft}px` : '0',
         },
       },
     };
@@ -762,8 +816,14 @@ export class ComponentDetector {
     return 'generic';
   }
 
-  private findChildByPattern(node: SceneNode, pattern: RegExp): SceneNode | undefined {
-    return node.children?.find(c => pattern.test(c.name));
+  private findDescendant(node: SceneNode, pattern: RegExp): SceneNode | undefined {
+    if (pattern.test(node.name)) return node;
+    if (!node.children) return undefined;
+    for (const child of node.children) {
+      const found = this.findDescendant(child, pattern);
+      if (found) return found;
+    }
+    return undefined;
   }
 
   detectProjectType(nodes: SceneNode[], components: ComponentClassification): ProjectTypeDetection {

@@ -78,7 +78,7 @@ export class Validator {
     const info: ValidationIssue[] = [];
 
     const fileMap = new Map<string, string>();
-    for (const f of files) fileMap.set(f.path, f.content);
+    for (const f of files) fileMap.set(f.path, typeof f.content === 'string' ? f.content : '');
 
     this.checkStructure(fileMap, errors, warnings, info);
     this.checkPhpSyntax(files, errors, warnings);
@@ -156,6 +156,7 @@ export class Validator {
   ): void {
     for (const file of files) {
       if (!file.path.endsWith('.php')) continue;
+      if (typeof file.content !== 'string') continue;
 
       const lines = file.content.split('\n');
 
@@ -238,6 +239,7 @@ export class Validator {
   ): void {
     for (const file of files) {
       if (!file.path.endsWith('.php')) continue;
+      if (typeof file.content !== 'string') continue;
 
       const content = file.content;
       const lines = content.split('\n');
@@ -312,6 +314,7 @@ export class Validator {
   ): void {
     for (const file of files) {
       if (!file.path.endsWith('.php') && !file.path.endsWith('.html')) continue;
+      if (typeof file.content !== 'string') continue;
 
       const content = file.content;
       const lines = content.split('\n');
@@ -375,6 +378,7 @@ export class Validator {
   ): void {
     for (const file of files) {
       if (!file.path.endsWith('.css')) continue;
+      if (typeof file.content !== 'string') continue;
 
       const lines = file.content.split('\n');
       const content = file.content;
@@ -482,7 +486,7 @@ export class Validator {
       if (!file.path.endsWith('.json')) continue;
 
       try {
-        JSON.parse(file.content);
+        if (typeof file.content === 'string') JSON.parse(file.content);
       } catch (e) {
         warnings.push({ file: file.path, message: `Invalid JSON in ${file.path}: ${(e as Error).message}`, type: 'warning' });
       }
@@ -532,6 +536,7 @@ export class Validator {
 
     for (const file of files) {
       if (!file.path.endsWith('.php') && !file.path.endsWith('.html') && !file.path.endsWith('.css')) continue;
+      if (typeof file.content !== 'string') continue;
 
       // Real WCAG contrast ratio calculation
       const colorPairs = this.extractColorPairs(file.content);
@@ -683,6 +688,7 @@ export class Validator {
     const hooksSet = new Set<string>();
 
     for (const file of files) {
+      if (typeof file.content !== 'string') continue;
       const content = file.content;
 
       for (const fn of ESCAPING_FUNCTIONS) {
