@@ -17,6 +17,8 @@ const mockComponents: ComponentClassification = {
   searchBars: [{ id: 's1', figmaNodeId: 's1', type: 'inline', hasDropdown: false, hasCategories: false }],
   newsletters: [{ id: 'nl1', figmaNodeId: 'nl1', hasName: false, hasEmail: true, hasConsentCheckbox: false }],
   sections: [], containers: [], columns: [],
+  responsiveBreakpoints: [],
+  interactionStates: [],
 };
 
 const mockTokens: ExtractedTokens = {
@@ -128,6 +130,8 @@ describe('WpBlockGenerator', () => {
       cartComponents: [], checkoutComponents: [], postCards: [], postDetail: [],
       contactForms: [], searchBars: [], newsletters: [],
       sections: [], containers: [], columns: [],
+      responsiveBreakpoints: [],
+      interactionStates: [],
     };
     const gen = new WpBlockGenerator(empty, mockTokens);
     const patterns = gen.generatePatterns();

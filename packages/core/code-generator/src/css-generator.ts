@@ -33,6 +33,8 @@ export class CssGenerator {
   ${this.generateTransitionVariables(tokens)}
   ${this.generateBorderCSSVars(tokens.borders)}
   ${this.generateZIndexVariables(tokens.zIndex)}
+  ${this.generateOpacityVariables(tokens)}
+  ${this.generateBlendModeVariables(tokens)}
 }
 
 ${this.generateFluidTokens(tokens, minVw, maxVw)}
@@ -1617,6 +1619,8 @@ textarea.form-control {
         { slug: 'h2', prop: ts.h2?.fontSize || '1.5rem' },
         { slug: 'h3', prop: ts.h3?.fontSize || '1.25rem' },
         { slug: 'h4', prop: ts.h4?.fontSize || '1.125rem' },
+        { slug: 'h5', prop: ts.h5?.fontSize || '1rem' },
+        { slug: 'h6', prop: ts.h6?.fontSize || '0.875rem' },
         { slug: 'body', prop: ts.body?.fontSize || '1rem' },
       ];
       for (const { slug, prop } of textStyles) {
@@ -1697,6 +1701,20 @@ textarea.form-control {
     return vars.join('\n  ');
   }
 
+  private generateOpacityVariables(tokens: ExtractedTokens): string {
+    if (!tokens.opacity || Object.keys(tokens.opacity).length === 0) return '';
+    return Object.entries(tokens.opacity)
+      .map(([key, val]) => `--opacity-${key}: ${val};`)
+      .join('\n  ');
+  }
+
+  private generateBlendModeVariables(tokens: ExtractedTokens): string {
+    if (!tokens.blendModes || tokens.blendModes.length === 0) return '';
+    return tokens.blendModes
+      .map((mode, i) => `--blend-mode-${i}: ${mode};`)
+      .join('\n  ');
+  }
+
   private generateTypographyVariables(t: ExtractedTokens['typography']): string {
     const vars: string[] = [];
 
@@ -1731,6 +1749,8 @@ textarea.form-control {
       if (ts.h2) vars.push(`--text-h2: ${ts.h2.fontSize};`);
       if (ts.h3) vars.push(`--text-h3: ${ts.h3.fontSize};`);
       if (ts.h4) vars.push(`--text-h4: ${ts.h4.fontSize};`);
+      if (ts.h5) vars.push(`--text-h5: ${ts.h5.fontSize};`);
+      if (ts.h6) vars.push(`--text-h6: ${ts.h6.fontSize};`);
       if (ts.body) vars.push(`--text-base: ${ts.body.fontSize};`);
       if (ts.bodySmall) vars.push(`--text-sm: ${ts.bodySmall.fontSize};`);
       if (ts.bodyLarge) vars.push(`--text-lg: ${ts.bodyLarge.fontSize};`);
@@ -1975,6 +1995,253 @@ textarea.form-control {
   .grid--4,
   .grid--5,
   .grid--6 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================
+   Post Card
+   ============================================ */
+
+.post-card {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--color-background-surface);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--duration-base) var(--timing-ease);
+}
+
+.post-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.post-card__image {
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+}
+
+.post-card__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.post-card__content {
+  padding: var(--spacing-4);
+}
+
+.post-card__category {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-primary-500);
+}
+
+.post-card__title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  margin: var(--spacing-2) 0;
+}
+
+.post-card__excerpt {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  margin-bottom: var(--spacing-3);
+}
+
+.post-card__meta {
+  display: flex;
+  gap: var(--spacing-4);
+  font-size: var(--text-xs);
+  color: var(--color-neutral-400);
+}
+
+.post-card__read-more {
+  display: inline-block;
+  margin-top: var(--spacing-3);
+  font-weight: 600;
+  color: var(--color-primary-500);
+}
+
+/* ============================================
+   Cart
+   ============================================ */
+
+.cart-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.cart-table th,
+.cart-table td {
+  padding: var(--spacing-4);
+  text-align: left;
+  border-bottom: var(--border-width-default) solid var(--color-border-default);
+}
+
+.cart-table th {
+  font-weight: var(--font-weight-semibold);
+  background: var(--color-background-surface);
+}
+
+.cart-item img {
+  border-radius: var(--radius-default);
+}
+
+.cart-quantity input {
+  width: 60px;
+  padding: var(--spacing-2);
+  border: var(--border-width-default) solid var(--color-border-default);
+  border-radius: var(--radius-default);
+  text-align: center;
+}
+
+.cart-remove button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.25rem;
+  color: var(--color-text-secondary);
+}
+
+.cart-remove button:hover {
+  color: var(--color-error-500);
+}
+
+.cart-totals td {
+  padding-top: var(--spacing-6);
+}
+
+.coupon-form {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+.coupon-form input {
+  padding: var(--spacing-2) var(--spacing-3);
+  border: var(--border-width-default) solid var(--color-border-default);
+  border-radius: var(--radius-default);
+}
+
+.cart-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--spacing-4);
+}
+
+/* ============================================
+   Checkout
+   ============================================ */
+
+.checkout-wrapper {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: var(--spacing-8);
+  align-items: start;
+}
+
+.checkout-section {
+  margin-bottom: var(--spacing-6);
+  padding: var(--spacing-6);
+  background: var(--color-background-surface);
+  border-radius: var(--radius-lg);
+}
+
+.checkout-heading {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  margin-bottom: var(--spacing-4);
+  padding-bottom: var(--spacing-3);
+  border-bottom: var(--border-width-default) solid var(--color-border-default);
+}
+
+.form-row {
+  margin-bottom: var(--spacing-4);
+}
+
+.form-row label {
+  display: block;
+  font-weight: var(--font-weight-medium);
+  margin-bottom: var(--spacing-1);
+  font-size: var(--text-sm);
+}
+
+.form-row input,
+.form-row select,
+.form-row textarea {
+  width: 100%;
+  padding: var(--spacing-3);
+  border: var(--border-width-default) solid var(--color-border-default);
+  border-radius: var(--radius-default);
+  font-size: var(--text-base);
+  transition: var(--transition-fast);
+}
+
+.form-row input:focus,
+.form-row select:focus,
+.form-row textarea:focus {
+  outline: none;
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px var(--color-primary-100);
+}
+
+.form-row--half {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-4);
+}
+
+.payment-methods {
+  border: var(--border-width-default) solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.payment-method {
+  padding: var(--spacing-4);
+  border-bottom: var(--border-width-default) solid var(--color-border-default);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+.payment-method:last-child {
+  border-bottom: none;
+}
+
+.payment-method input[type="radio"] {
+  width: auto;
+}
+
+.checkout-summary {
+  background: var(--color-background-surface);
+  padding: var(--spacing-6);
+  border-radius: var(--radius-lg);
+  position: sticky;
+  top: var(--spacing-4);
+}
+
+.order-review-row {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--spacing-3) 0;
+}
+
+.order-review-total {
+  font-weight: 700;
+  font-size: var(--text-lg);
+  border-top: var(--border-width-default) solid var(--color-border-default);
+  padding-top: var(--spacing-4);
+  margin-top: var(--spacing-2);
+}
+
+@media (max-width: 768px) {
+  .checkout-wrapper {
+    grid-template-columns: 1fr;
+  }
+  .form-row--half {
     grid-template-columns: 1fr;
   }
 }

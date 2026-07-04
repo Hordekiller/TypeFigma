@@ -56,6 +56,9 @@ const mockGeneratedCode = {
   html: '<div>Test HTML</div>',
   globalCss: ':root { --color-primary: #3b82f6; }',
   componentsCss: '.product-card { border: 1px solid; }',
+  themeJson: '{"version":3,"settings":{},"styles":{},"templateParts":[]}',
+  blockPatterns: [],
+  blockTemplates: [],
 };
 
 describe('WordPressFileBuilder', () => {

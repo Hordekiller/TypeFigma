@@ -674,6 +674,13 @@ export class ThemeJsonGenerator {
       { name: 'header', title: 'Header', area: 'header' },
       { name: 'footer', title: 'Footer', area: 'footer' },
       { name: 'sidebar', title: 'Sidebar', area: 'sidebar' },
+      { name: 'comments', title: 'Comments', area: 'uncategorized' },
+      { name: 'search-results', title: 'Search Results', area: 'uncategorized' },
+      { name: '404-content', title: '404 Content', area: 'uncategorized' },
+      { name: 'post-meta', title: 'Post Meta', area: 'uncategorized' },
+      { name: 'related-posts', title: 'Related Posts', area: 'uncategorized' },
+      { name: 'breadcrumbs', title: 'Breadcrumbs', area: 'uncategorized' },
+      { name: 'cta-section', title: 'Call to Action', area: 'uncategorized' },
     ];
   }
 

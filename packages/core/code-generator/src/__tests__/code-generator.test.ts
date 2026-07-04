@@ -10,6 +10,8 @@ const mockComponents: ComponentClassification = {
   cartComponents: [], checkoutComponents: [], postCards: [], postDetail: [],
   contactForms: [], searchBars: [], newsletters: [],
   sections: [], containers: [], columns: [],
+  responsiveBreakpoints: [],
+  interactionStates: [],
 };
 
 const mockTokens: ExtractedTokens = {

@@ -50,7 +50,7 @@ export class CodeGenerator {
 
     if (this.options.includeTailwind) {
       const twGen = new TailwindV4Generator(tokens);
-      const twOutput = twGen.generate({} as any);
+      const twOutput = twGen.generate();
       result.tailwindCss = twOutput.css;
       result.tailwindComponents = twOutput.components;
     }

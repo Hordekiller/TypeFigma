@@ -2,7 +2,8 @@ import type {
   FigmaAnalysis,
 } from '@typefigma/analyzer';
 import type { ElementorTemplate, GlobalSettings } from '@typefigma/elementor-mapper';
-import { ThemeJsonGenerator, WpBlockGenerator } from '@typefigma/code-generator';
+import { WpBlockGenerator, ThemeJsonGenerator } from '@typefigma/code-generator';
+import type { GeneratedCode, BlockPattern } from '@typefigma/code-generator';
 import { AdminPanelGenerator } from './config-panel.js';
 import type { FontFamilyEntry } from './font-manager.js';
 import * as zlib from 'zlib';
@@ -1774,6 +1775,13 @@ add_action('elementor/elements/categories_registered', function ($elements_manag
     }));
   }
 
+  private buildBlockPatternsFromCodeGen(patterns: BlockPattern[]): { path: string; content: string }[] {
+    return patterns.map((pattern) => ({
+      path: `patterns/${pattern.slug}.php`,
+      content: this.buildPatternPhp(pattern),
+    }));
+  }
+
   private buildPatternPhp(pattern: { title: string; slug: string; description?: string; categories: string[]; content: string; viewportWidth?: number; inserter?: boolean }): string {
     const header = [
       '<?php',
@@ -2021,7 +2029,7 @@ ${isEcom ? '* WooCommerce - for e-commerce functionality\n' : ''}
   getAllFiles(
     elementorTemplates: ElementorTemplate[],
     globalSettings: GlobalSettings,
-    codeGen: { globalCss: string; componentsCss: string },
+    codeGen: GeneratedCode,
     fontEntries?: FontFamilyEntry[],
   ): ThemeFile[] {
     const files: ThemeFile[] = [
@@ -2041,9 +2049,9 @@ ${isEcom ? '* WooCommerce - for e-commerce functionality\n' : ''}
       { path: 'assets/js/theme.js', content: this.buildThemeJs() },
       { path: 'inc/customizer.php', content: this.buildCustomizerPhp() },
       { path: 'elementor/global-settings.json', content: this.buildGlobalSettingsJson(globalSettings) },
-      { path: 'theme.json', content: this.buildThemeJson() },
-      ...this.buildBlockPatterns(),
-      ...this.buildBlockTemplates(),
+      { path: 'theme.json', content: codeGen.themeJson || this.buildThemeJson() },
+      ...(codeGen.blockPatterns ? this.buildBlockPatternsFromCodeGen(codeGen.blockPatterns) : []),
+      ...(codeGen.blockTemplates ? codeGen.blockTemplates.map(t => ({ path: `templates/${t.slug}.html`, content: t.content })) : []),
     ];
 
     for (const template of elementorTemplates) {

@@ -1,0 +1,14 @@
+{
+  "api": "1.0.0",
+  "id": "1442765132831276905",
+  "name": "TypeFigma",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "capabilities": [],
+  "networkAccess": {
+    "allowedDomains": ["none"],
+    "reasoning": "We do not make any network requests — analysis runs entirely inside Figma."
+  },
+  "documentAccess": "dynamic-page"
+}

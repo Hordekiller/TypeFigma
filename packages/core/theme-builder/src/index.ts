@@ -96,6 +96,7 @@ export class ThemeBuilder {
 }
 
 export { WordPressFileBuilder } from './wordpress-files.js';
+export { DocGenerator } from './doc-generator.js';
 export type { ThemeFile, ThemeOptions, ThemeFontConfig, FontOption } from './wordpress-files.js';
 
 export function slugify(name: string): string {

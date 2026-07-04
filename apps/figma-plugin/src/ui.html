@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TypeFigma</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #2c2c2c;
+      --bg-card: #383838;
+      --bg-hover: #444;
+      --bg-input: #1e1e1e;
+      --text-primary: #f0f0f0;
+      --text-secondary: #b0b0b0;
+      --text-muted: #888;
+      --accent: #18a0fb;
+      --accent-hover: #3db4ff;
+      --success: #1bc47d;
+      --warning: #ffb347;
+      --error: #f24822;
+      --border: #505050;
+      --radius: 6px;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    body {
+      font-family: var(--font);
+      font-size: 12px;
+      color: var(--text-primary);
+      background: var(--bg);
+      padding: 16px;
+      overflow-x: hidden;
+    }
+    h1 { font-size: 16px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+    h1 small { font-size: 11px; font-weight: 400; color: var(--text-muted); }
+    h2 { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary); }
+    h3 { font-size: 11px; font-weight: 600; margin-bottom: 4px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    p { color: var(--text-secondary); line-height: 1.5; font-size: 11px; }
+    .subtitle { color: var(--text-muted); font-size: 11px; margin-bottom: 16px; }
+
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .header-actions { display: flex; gap: 6px; }
+    .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; background: var(--bg-card); color: var(--text-secondary); gap: 4px; }
+    .badge.accent { background: var(--accent); color: #fff; }
+    .badge.success { background: var(--success); color: #fff; }
+
+    .row { display: flex; gap: 12px; margin-bottom: 6px; flex-wrap: wrap; }
+    .stat { flex: 1; min-width: 80px; background: var(--bg-card); border-radius: var(--radius); padding: 10px 12px; text-align: center; }
+    .stat-value { font-size: 20px; font-weight: 700; color: var(--text-primary); }
+    .stat-label { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .card { background: var(--bg-card); border-radius: var(--radius); padding: 12px; border: 1px solid var(--border); }
+    .card.full { grid-column: 1 / -1; }
+
+    button {
+      font-family: var(--font);
+      font-size: 11px;
+      padding: 6px 14px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-weight: 500;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    button:hover { background: var(--bg-hover); border-color: var(--accent); }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    button.primary:hover { background: var(--accent-hover); }
+    button.success { background: var(--success); border-color: var(--success); color: #fff; }
+    button.success:hover { opacity: 0.9; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    button.sm { padding: 3px 8px; font-size: 10px; }
+
+    label { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-secondary); cursor: pointer; }
+    input[type="checkbox"] { accent-color: var(--accent); }
+    select {
+      font-family: var(--font);
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--bg-input);
+      color: var(--text-primary);
+      width: 100%;
+    }
+    select:focus { outline: none; border-color: var(--accent); }
+
+    .options { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+
+    .frame-list { max-height: 200px; overflow-y: auto; margin-top: 8px; }
+    .frame-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 4px 8px; border-radius: 4px; cursor: pointer;
+      transition: background 0.1s; font-size: 11px;
+    }
+    .frame-item:hover { background: var(--bg-hover); }
+    .frame-item.selected { background: rgba(24, 160, 251, 0.15); }
+    .frame-item .type-badge { font-size: 9px; padding: 1px 5px; border-radius: 3px; background: var(--bg); color: var(--text-muted); }
+    .frame-item .page-type { font-size: 9px; padding: 1px 5px; border-radius: 3px; background: var(--accent); color: #fff; margin-left: auto; }
+
+    .tab-bar { display: flex; gap: 2px; margin-bottom: 12px; background: var(--bg); border-radius: var(--radius); padding: 2px; }
+    .tab { padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 11px; color: var(--text-muted); border: none; background: transparent; font-weight: 500; }
+    .tab:hover { color: var(--text-primary); }
+    .tab.active { background: var(--bg-card); color: var(--text-primary); }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .token-list { max-height: 300px; overflow-y: auto; }
+    .token-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 11px; }
+    .swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--border); flex-shrink: 0; }
+    .token-name { color: var(--text-secondary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .token-value { color: var(--text-muted); font-family: monospace; font-size: 10px; }
+
+    .page-map-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 8px; border-radius: 4px;
+      background: var(--bg); margin-bottom: 4px;
+    }
+    .page-map-row .name { flex: 1; }
+    .page-map-row select { width: 140px; }
+
+    .empty-state { text-align: center; padding: 24px; color: var(--text-muted); }
+    .empty-state .icon { font-size: 32px; margin-bottom: 8px; }
+
+    .actions-bar { display: flex; gap: 8px; justify-content: flex-end; padding-top: 12px; border-top: 1px solid var(--border); margin-top: 12px; }
+
+    .log { font-size: 10px; color: var(--text-muted); margin-top: 8px; padding: 8px; background: var(--bg-input); border-radius: var(--radius); max-height: 100px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>TypeFigma <small>v1.0.0</small></h1>
+    <p class="subtitle" id="doc-name">Extract Figma designs → WordPress theme pipeline</p>
+  </div>
+  <div class="header-actions">
+    <span class="badge" id="selection-count">0 selected</span>
+    <button class="primary" id="btn-extract" onclick="extract()">Export</button>
+  </div>
+</div>
+
+<div class="stat-row">
+  <div class="row" id="stats">
+    <div class="stat"><div class="stat-value" id="stat-vars">-</div><div class="stat-label">Variables</div></div>
+    <div class="stat"><div class="stat-value" id="stat-styles">-</div><div class="stat-label">Styles</div></div>
+    <div class="stat"><div class="stat-value" id="stat-frames">-</div><div class="stat-label">Frames</div></div>
+    <div class="stat"><div class="stat-value" id="stat-colors">-</div><div class="stat-label">Colors</div></div>
+    <div class="stat"><div class="stat-value" id="stat-typo">-</div><div class="stat-label">Typography</div></div>
+  </div>
+</div>
+
+<div class="options">
+  <label><input type="checkbox" id="opt-variables" checked /> Variables</label>
+  <label><input type="checkbox" id="opt-styles" checked /> Styles</label>
+  <label><input type="checkbox" id="opt-autolayout" checked /> Auto Layout</label>
+  <label><input type="checkbox" id="opt-hidden" /> Hidden layers</label>
+</div>
+
+<div class="tab-bar">
+  <button class="tab active" onclick="switchTab('selection')">Selection & Mapping</button>
+  <button class="tab" onclick="switchTab('tokens')">Tokens</button>
+  <button class="tab" onclick="switchTab('styles')">Styles</button>
+</div>
+
+<div class="panel active" id="panel-selection">
+  <div class="grid">
+    <div class="card">
+      <h3>Selected Frames</h3>
+      <p style="margin-bottom:8px">Frames selected in the current page will be exported.</p>
+      <div id="frame-list" class="frame-list">
+        <div class="empty-state"><div class="icon">▣</div>Select frames on the canvas</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Page Mapping</h3>
+      <p style="margin-bottom:8px">Map each frame to a WordPress page type.</p>
+      <div id="page-mapping">
+        <div class="empty-state"><div class="icon">⇄</div>Select frames to enable mapping</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="panel-tokens">
+  <div class="card full">
+    <h3>Color Variables</h3>
+    <div id="color-tokens" class="token-list">
+      <div class="empty-state"><div class="icon">🎨</div>No color variables extracted yet</div>
+    </div>
+  </div>
+  <div class="card full" style="margin-top:12px">
+    <h3>All Variables</h3>
+    <div id="all-variables" class="token-list">
+      <div class="empty-state"><div class="icon">📐</div>No variables extracted yet</div>
+    </div>
+  </div>
+</div>
+
+<div class="panel" id="panel-styles">
+  <div class="grid">
+    <div class="card">
+      <h3>Paint Styles</h3>
+      <div id="paint-styles" class="token-list">
+        <div class="empty-state"><div class="icon">🎯</div>No paint styles</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Text Styles</h3>
+      <div id="text-styles" class="token-list">
+        <div class="empty-state"><div class="icon">A</div>No text styles</div>
+      </div>
+    </div>
+  </div>
+  <div class="card full" style="margin-top:12px">
+    <h3>Effect Styles</h3>
+    <div id="effect-styles" class="token-list">
+      <div class="empty-state"><div class="icon">✦</div>No effect styles</div>
+    </div>
+  </div>
+</div>
+
+<div class="actions-bar">
+  <button onclick="switchTab('selection')" id="btn-preview">Preview Tokens</button>
+  <button class="primary" onclick="extract()">Export</button>
+  <button class="success" onclick="download()">Download JSON</button>
+</div>
+
+<div class="log" id="log">Ready ✓</div>
+
+<script>
+// ─── State ────────────────────────────────────────────
+
+let exportData = null;
+let currentSelection = [];
+let pageMapping = [];
+
+// ─── Init ─────────────────────────────────────────────
+
+onmessage = (event) => {
+  const msg = event.data.pluginMessage || event.data;
+  switch (msg.type) {
+    case 'init': {
+      document.getElementById('doc-name').textContent =
+        `Document: ${msg.currentPage.name} — ${msg.allPages.length} pages`;
+      currentSelection = msg.selection || [];
+      renderFrames(msg.selection || []);
+      renderPageMapping(msg.selection || []);
+      updateSelectionBadge(msg.selection?.length || 0);
+      break;
+    }
+    case 'selection-update': {
+      currentSelection = msg.selection || [];
+      renderFrames(msg.selection || []);
+      renderPageMapping(msg.selection || []);
+      updateSelectionBadge(msg.selection?.length || 0);
+      break;
+    }
+    case 'extract-result': {
+      exportData = msg.data;
+      renderTokens(msg.data);
+      renderStyles(msg.data);
+      updateStats(msg.data.tokenCount);
+      log('Export complete: ' + msg.data.tokenCount.variables + ' variables, ' +
+          msg.data.tokenCount.styles + ' styles, ' +
+          msg.data.tokenCount.autoLayoutNodes + ' nodes');
+      break;
+    }
+    case 'download': {
+      downloadJson(msg.data, msg.fileName);
+      log('Downloaded: ' + msg.fileName);
+      break;
+    }
+    case 'notify': {
+      log(msg.text);
+      break;
+    }
+  }
+};
+
+// ─── Rendering ───────────────────────────────────────
+
+function renderFrames(selection) {
+  const container = document.getElementById('frame-list');
+  if (!selection || selection.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">▣</div>Select frames on the canvas</div>';
+    return;
+  }
+  container.innerHTML = selection.map(n => `
+    <div class="frame-item">
+      <span class="type-badge">${n.type}</span>
+      <span class="token-name">${escapeHtml(n.name)}</span>
+      <span style="color:var(--text-muted);font-size:10px">${n.id.slice(0, 8)}…</span>
+    </div>
+  `).join('');
+}
+
+function renderPageMapping(selection) {
+  const container = document.getElementById('page-mapping');
+  if (!selection || selection.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">⇄</div>Select frames to enable mapping</div>';
+    return;
+  }
+
+  pageMapping = selection.map(n => ({
+    frameId: n.id,
+    frameName: n.name,
+    pageType: guessPageType(n.name),
+  }));
+
+  container.innerHTML = pageMapping.map(m => `
+    <div class="page-map-row">
+      <span class="type-badge">${m.frameId.slice(0, 8)}…</span>
+      <span class="name">${escapeHtml(m.frameName)}</span>
+      <select onchange="updatePageType('${m.frameId}', this.value)">
+        <option value="page" ${m.pageType === 'page' ? 'selected' : ''}>Page</option>
+        <option value="single" ${m.pageType === 'single' ? 'selected' : ''}>Single</option>
+        <option value="archive" ${m.pageType === 'archive' ? 'selected' : ''}>Archive</option>
+        <option value="shop" ${m.pageType === 'shop' ? 'selected' : ''}>Shop</option>
+        <option value="cart" ${m.pageType === 'cart' ? 'selected' : ''}>Cart</option>
+        <option value="checkout" ${m.pageType === 'checkout' ? 'selected' : ''}>Checkout</option>
+        <option value="my-account" ${m.pageType === 'my-account' ? 'selected' : ''}>My Account</option>
+        <option value="header" ${m.pageType === 'header' ? 'selected' : ''}>Header</option>
+        <option value="footer" ${m.pageType === 'footer' ? 'selected' : ''}>Footer</option>
+      </select>
+    </div>
+  `).join('');
+}
+
+function renderTokens(data) {
+  const colors = (data.variables || []).filter(v => v.resolvedType === 'COLOR');
+  const colorContainer = document.getElementById('color-tokens');
+  if (colors.length === 0) {
+    colorContainer.innerHTML = '<div class="empty-state"><div class="icon">🎨</div>No color variables found</div>';
+  } else {
+    colorContainer.innerHTML = colors.map(v => `
+      <div class="token-row">
+        <span class="swatch" style="background:${v.value}"></span>
+        <span class="token-name">${escapeHtml(v.name)}</span>
+        <span class="token-value">${v.value}</span>
+        <span class="badge">${v.collectionName}</span>
+      </div>
+    `).join('');
+  }
+
+  const allVars = document.getElementById('all-variables');
+  if (data.variables.length === 0) {
+    allVars.innerHTML = '<div class="empty-state"><div class="icon">📐</div>No variables found</div>';
+  } else {
+    const typeLabels = { COLOR: '🎨', FLOAT: '🔢', STRING: '📝', BOOLEAN: '✅' };
+    allVars.innerHTML = data.variables.map(v => `
+      <div class="token-row">
+        <span>${typeLabels[v.resolvedType] || '📐'}</span>
+        <span class="token-name">${escapeHtml(v.collectionName)} / ${escapeHtml(v.name)}</span>
+        <span class="token-value">${String(v.value).slice(0, 40)}</span>
+      </div>
+    `).join('');
+  }
+}
+
+function renderStyles(data) {
+  const paints = (data.styles || []).filter(s => s.type === 'PAINT');
+  const texts = (data.styles || []).filter(s => s.type === 'TEXT');
+  const effects = (data.styles || []).filter(s => s.type === 'EFFECT');
+
+  const pc = document.getElementById('paint-styles');
+  if (paints.length === 0) {
+    pc.innerHTML = '<div class="empty-state"><div class="icon">🎯</div>No paint styles</div>';
+  } else {
+    pc.innerHTML = paints.map(s => `
+      <div class="token-row">
+        <span class="swatch" style="background:${typeof s.value === 'string' ? s.value : 'var(--bg)'}"></span>
+        <span class="token-name">${escapeHtml(s.name)}</span>
+        <span class="token-value">${typeof s.value === 'string' ? s.value : 'gradient'}</span>
+      </div>
+    `).join('');
+  }
+
+  const tc = document.getElementById('text-styles');
+  if (texts.length === 0) {
+    tc.innerHTML = '<div class="empty-state"><div class="icon">A</div>No text styles</div>';
+  } else {
+    tc.innerHTML = texts.map(s => {
+      const val = typeof s.value === 'object' ? s.value : {};
+      return `
+        <div class="token-row">
+          <span style="font-size:13px;font-weight:${val.fontWeight || 400}">A</span>
+          <span class="token-name">${escapeHtml(s.name)}</span>
+          <span class="token-value">${val.fontFamily || ''} ${val.fontSize || ''}px</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  const ec = document.getElementById('effect-styles');
+  if (effects.length === 0) {
+    ec.innerHTML = '<div class="empty-state"><div class="icon">✦</div>No effect styles</div>';
+  } else {
+    ec.innerHTML = effects.map(s => {
+      const val = typeof s.value === 'object' && s.value ? s.value : {};
+      const effects = val.effects || [];
+      return `
+        <div class="token-row">
+          <span>✦</span>
+          <span class="token-name">${escapeHtml(s.name)}</span>
+          <span class="token-value">${effects.map((e: { type: string }) => e.type).join(', ')}</span>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+function updateStats(tc) {
+  document.getElementById('stat-vars').textContent = tc.variables;
+  document.getElementById('stat-styles').textContent = tc.styles;
+  document.getElementById('stat-frames').textContent = tc.autoLayoutNodes;
+  document.getElementById('stat-colors').textContent = tc.colors;
+  document.getElementById('stat-typo').textContent = tc.typography;
+}
+
+function updateSelectionBadge(count) {
+  const badge = document.getElementById('selection-count');
+  badge.textContent = count + ' selected';
+  badge.className = 'badge' + (count > 0 ? ' accent' : '');
+}
+
+// ─── Actions ─────────────────────────────────────────
+
+function extract() {
+  const selectedIds = currentSelection.map(n => n.id);
+  parent.postMessage({
+    pluginMessage: {
+      type: 'extract',
+      selectedIds,
+      includeVariables: document.getElementById('opt-variables').checked,
+      includeStyles: document.getElementById('opt-styles').checked,
+      includeAutoLayout: document.getElementById('opt-autolayout').checked,
+      includeHidden: document.getElementById('opt-hidden').checked,
+      download: false,
+    }
+  }, '*');
+  log('Extracting...');
+}
+
+function download() {
+  if (!exportData) {
+    extract();
+    setTimeout(() => {
+      if (exportData) doDownload();
+      else log('Error: No data to download. Try exporting first.');
+    }, 500);
+    return;
+  }
+  doDownload();
+}
+
+function doDownload() {
+  parent.postMessage({
+    pluginMessage: {
+      type: 'download',
+      download: true,
+      selectedIds: currentSelection.map(n => n.id),
+      includeVariables: document.getElementById('opt-variables').checked,
+      includeStyles: document.getElementById('opt-styles').checked,
+      includeAutoLayout: document.getElementById('opt-autolayout').checked,
+      includeHidden: document.getElementById('opt-hidden').checked,
+    }
+  }, '*');
+}
+
+function downloadJson(data, fileName) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function updatePageType(frameId, type) {
+  const mapping = pageMapping.find(m => m.frameId === frameId);
+  if (mapping) mapping.pageType = type;
+}
+
+function guessPageType(name) {
+  const lower = name.toLowerCase();
+  if (lower.includes('shop') || lower.includes('store') || lower.includes('product archive')) return 'shop';
+  if (lower.includes('cart')) return 'cart';
+  if (lower.includes('checkout')) return 'checkout';
+  if (lower.includes('my-account') || lower.includes('account')) return 'my-account';
+  if (lower.includes('header') || lower.includes('nav')) return 'header';
+  if (lower.includes('footer')) return 'footer';
+  if (lower.includes('single') || lower.includes('detail')) return 'single';
+  if (lower.includes('archive') || lower.includes('blog') || lower.includes('category')) return 'archive';
+  return 'page';
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.tab[onclick*="${name}"]`)?.classList.add('active');
+  document.getElementById('panel-' + name)?.classList.add('active');
+}
+
+function log(msg) {
+  const el = document.getElementById('log');
+  el.textContent = '> ' + new Date().toLocaleTimeString() + ' ' + msg;
+}
+</script>
+
+</body>
+</html>

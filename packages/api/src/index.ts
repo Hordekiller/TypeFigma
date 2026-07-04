@@ -26,6 +26,10 @@ interface GenerateRequest {
   createZip?: boolean;
   selectedSections?: string[];
   hierarchicalSelection?: import('@typefigma/elementor-mapper').HierarchicalSelection;
+  includeDtcg?: boolean;
+  includeThemeJson?: boolean;
+  includeTailwind?: boolean;
+  includeBlocks?: boolean;
 }
 
 interface GenerateResponse {
@@ -117,8 +121,13 @@ app.post('/api/generate', async (req, res) => {
     const analysis = await analyzer.analyze(body.figmaUrl);
     const pType = analysis.projectType;
 
-    const codeGen = new CodeGenerator();
-    const generatedCode = codeGen.generate(analysis.components, analysis.designTokens);
+    const codeGen = new CodeGenerator({
+      includeDtcg: body.includeDtcg || false,
+      includeThemeJson: body.includeThemeJson || body.includeBlocks || false,
+      includeTailwind: body.includeTailwind || false,
+      includeBlocks: body.includeBlocks || false,
+    });
+    const generatedCode = codeGen.generate(analysis.components, analysis.designTokens, analysis.content);
 
     const elementorGen = new ElementorGenerator(analysis.designTokens);
     let selection: import('@typefigma/elementor-mapper').SectionSelectionConfig | undefined;

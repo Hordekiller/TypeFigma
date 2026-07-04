@@ -95,6 +95,11 @@ export class DtcgGenerator {
       (doc as Record<string, unknown>).ecommerce = this.generateEcommerceTokens();
     }
 
+    const typographyTokens = this.generateDtcgsWithTypography(this.tokens);
+    if (Object.keys(typographyTokens).length > 0) {
+      (doc as Record<string, unknown>).typography = typographyTokens;
+    }
+
     return doc;
   }
 

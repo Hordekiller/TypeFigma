@@ -9,6 +9,16 @@ import type {
   GalleryComponent,
   FormComponent,
   NewsletterComponent,
+  NavigationComponent,
+  SearchComponent,
+  CTAComponent,
+  CartComponent,
+  CheckoutComponent,
+  ProductDetailComponent,
+  PostCardComponent,
+  PostDetailComponent,
+  ContainerComponent,
+  ColumnComponent,
   ExtractedTokens,
 } from '@typefigma/analyzer';
 
@@ -125,6 +135,12 @@ export class WpBlockGenerator {
     }
     if (this.components.contactForms.length > 0) {
       patterns.push(this.patternFromContactForm(this.components.contactForms[0]));
+    }
+    if (this.components.postDetail.length > 0) {
+      patterns.push(this.patternFromPostDetail(this.components.postDetail[0]));
+    }
+    if (this.components.productDetails.length > 0) {
+      patterns.push(this.patternFromProductDetail(this.components.productDetails[0]));
     }
     if (this.components.newsletters.length > 0) {
       patterns.push(this.patternFromNewsletter(this.components.newsletters[0]));
@@ -514,9 +530,18 @@ export class WpBlockGenerator {
 
   private patternFromContactForm(form: FormComponent): BlockPattern {
     const fields = form.fields?.inputs || [];
-    const fieldBlocks = fields.map(f =>
-      paragraphBlock(`${f.label || f.placeholder || 'Field'}: [${f.type || 'text'}]`)
-    ).join('\n');
+    const fieldBlocks = fields.map(f => {
+      const label = f.label || f.placeholder || 'Field';
+      const fieldType = f.type || 'text';
+      const isRequired = f.required ? '{"required":true}' : '';
+      if (fieldType === 'textarea') {
+        return `<!-- wp:paragraph --><p><strong>${label}</strong></p><!-- /wp:paragraph -->\n<!-- wp:paragraph --><p><textarea placeholder="${label}" ${isRequired}></textarea></p><!-- /wp:paragraph -->`;
+      }
+      if (fieldType === 'text' || fieldType === 'email') {
+        return `<!-- wp:paragraph --><p><strong>${label}</strong></p><!-- /wp:paragraph -->\n<!-- wp:paragraph --><p><input type="${fieldType}" placeholder="${label}" ${isRequired} /></p><!-- /wp:paragraph -->`;
+      }
+      return paragraphBlock(`${label}: [${fieldType}]`);
+    }).join('\n');
 
     const content = groupBlock(
       [
@@ -571,6 +596,94 @@ export class WpBlockGenerator {
       categories: ['newsletter', 'email'],
       content,
       keywords: ['newsletter', 'subscribe', 'email'],
+    };
+  }
+
+  private patternFromPostDetail(_post: PostDetailComponent): BlockPattern {
+    const content = groupBlock(
+      [
+        `<!-- wp:post-featured-image /-->`,
+        `<!-- wp:post-title {"level":1} /-->`,
+        `<!-- wp:group {"layout":{"type":"flex","flexWrap":"wrap"},"style":{"spacing":{"margin":{"top":"1rem","bottom":"1rem"}},"elements":{"link":{"color":{"text":"var:preset|color|neutral-400"}}}},"textColor":"neutral-400","fontSize":"small"} -->`,
+        `<!-- wp:post-date /-->`,
+        `<!-- wp:post-author /-->`,
+        `<!-- wp:post-terms {"term":"category"} /-->`,
+        `<!-- /wp:group -->`,
+        `<!-- wp:post-content /-->`,
+        `<!-- wp:post-terms {"term":"post_tag","separator":"  ","style":{"spacing":{"padding":{"top":"2rem"}}}} /-->`,
+        `<!-- wp:post-navigation-link /-->`,
+        `<!-- wp:comments -->`,
+        `<!-- wp:comments-title /-->`,
+        `<!-- wp:comment-template -->`,
+        `<!-- wp:comments-avatar /-->`,
+        `<!-- wp:comment-author-name /-->`,
+        `<!-- wp:comment-content /-->`,
+        `<!-- wp:comment-date /-->`,
+        `<!-- /wp:comment-template -->`,
+        `<!-- wp:comments-pagination -->`,
+        `<!-- wp:comments-pagination-previous /-->`,
+        `<!-- wp:comments-pagination-numbers /-->`,
+        `<!-- wp:comments-pagination-next /-->`,
+        `<!-- /wp:comments-pagination -->`,
+        `<!-- wp:post-comment-form /-->`,
+        `<!-- /wp:comments -->`,
+      ].join('\n'),
+      {
+        layout: { type: 'constrained' },
+        style: { spacing: { padding: { top: '4rem', bottom: '4rem' } } },
+      },
+    );
+
+    return {
+      title: 'Single Post',
+      slug: 'single-post',
+      description: 'Full post detail layout with featured image, content, and comments',
+      categories: ['posts', 'blog'],
+      content,
+      keywords: ['post', 'article', 'blog', 'single'],
+    };
+  }
+
+  private patternFromProductDetail(_product: ProductDetailComponent): BlockPattern {
+    const content = groupBlock(
+      [
+        `<!-- wp:columns {"style":{"spacing":{"blockGap":"4rem"}}} -->`,
+        `<!-- wp:column {"width":"50%"} -->`,
+        `<!-- wp:woocommerce/product-image-gallery /-->`,
+        `<!-- /wp:column -->`,
+        `<!-- wp:column {"width":"50%"} -->`,
+        `<!-- wp:woocommerce/product-title /-->`,
+        `<!-- wp:woocommerce/product-rating /-->`,
+        `<!-- wp:woocommerce/product-price /-->`,
+        `<!-- wp:woocommerce/product-excerpt /-->`,
+        `<!-- wp:woocommerce/add-to-cart-form /-->`,
+        `<!-- wp:woocommerce/product-meta /-->`,
+        `<!-- wp:woocommerce/product-details /-->`,
+        `<!-- /wp:column -->`,
+        `<!-- /wp:columns -->`,
+        `<!-- wp:woocommerce/related-products -->`,
+        `<!-- wp:woocommerce/product-query -->`,
+        `<!-- wp:post-template -->`,
+        `<!-- wp:woocommerce/product-image /-->`,
+        `<!-- wp:woocommerce/product-title /-->`,
+        `<!-- wp:woocommerce/product-price /-->`,
+        `<!-- /wp:post-template -->`,
+        `<!-- /wp:woocommerce/product-query -->`,
+        `<!-- /wp:woocommerce/related-products -->`,
+      ].join('\n'),
+      {
+        layout: { type: 'constrained' },
+        style: { spacing: { padding: { top: '4rem', bottom: '4rem' } } },
+      },
+    );
+
+    return {
+      title: 'Product Detail',
+      slug: 'product-detail',
+      description: 'Single product detail layout with gallery, info, and related products',
+      categories: ['woocommerce', 'products'],
+      content,
+      keywords: ['product', 'detail', 'single', 'woocommerce'],
     };
   }
 

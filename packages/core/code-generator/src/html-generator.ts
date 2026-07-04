@@ -13,10 +13,36 @@ import type {
   SearchComponent,
   ProductDetailComponent,
   PostCardComponent,
+  CTAComponent,
+  CartComponent,
+  CheckoutComponent,
+  PostDetailComponent,
+  ContainerComponent,
+  ColumnComponent,
   ExtractedTokens,
   ExtractedContent,
   TextContent,
 } from '@typefigma/analyzer';
+
+export interface PageOptions {
+  includeHeader?: boolean;
+  includeNavigation?: boolean;
+  includeHero?: boolean;
+  includeSections?: boolean;
+  includeTestimonials?: boolean;
+  includeGalleries?: boolean;
+  includeProductGrid?: boolean;
+  includeProductDetails?: boolean;
+  includeCTA?: boolean;
+  includeCart?: boolean;
+  includeCheckout?: boolean;
+  includePostDetail?: boolean;
+  includeSearch?: boolean;
+  includeNewsletter?: boolean;
+  includeContactForms?: boolean;
+  includeContainers?: boolean;
+  includeFooter?: boolean;
+}
 
 export class HtmlGenerator {
   generateHeader(header: HeaderComponent, _tokens: ExtractedTokens, content?: ExtractedContent): string {
@@ -465,6 +491,203 @@ ${detail.sections?.productTabs ? `
 </div>`;
   }
 
+  generateCTA(cta: CTAComponent, _tokens?: ExtractedTokens, content?: ExtractedContent): string {
+    const texts = this.findTextsForNode(content, cta.figmaNodeId);
+    const heading = texts.find(t => t.role === 'heading');
+    const body = texts.filter(t => t.role === 'body');
+    const buttons = texts.filter(t => t.role === 'button');
+
+    const ctaClass = `cta cta--${cta.type}`;
+    return `<!-- CTA: ${cta.type} -->
+<section class="${ctaClass} section section--muted" aria-label="${heading ? this.escapeHtml(heading.text) : 'Call to action'}">
+  <div class="container">
+    <div class="cta-wrapper" style="text-align:center;max-width:640px;margin:0 auto">
+      <h2 class="section-title">${heading ? this.escapeHtml(heading.text) : 'Ready to Get Started?'}</h2>
+      ${body.map(t => `<p class="section-description">${this.escapeHtml(t.text)}</p>`).join('\n      ')}
+      <div class="cta-actions" style="display:flex;gap:var(--spacing-3);justify-content:center;margin-top:var(--spacing-6)">
+        ${buttons.length > 0
+          ? buttons.map((t, i) => `<a href="${t.hyperlink || '#'}" class="btn ${i === 0 ? 'btn-primary' : 'btn-outline'}">${this.escapeHtml(t.text)}</a>`).join('\n        ')
+          : `<a href="#" class="btn btn-primary">Get Started</a>
+        <a href="#" class="btn btn-outline">Learn More</a>`}
+      </div>
+    </div>
+    ${cta.hasImage ? `<div class="cta-image" style="margin-top:var(--spacing-8)">
+      <img src="{{cta_image}}" alt="" loading="lazy" />
+    </div>` : ''}
+  </div>
+</section>`;
+  }
+
+  generateCart(cart: CartComponent): string {
+    const cartClass = `cart cart--${cart.type}`;
+    return `<!-- Cart: ${cart.type} -->
+<div class="${cartClass}">
+  <table class="cart-table">
+    <thead>
+      <tr>
+        <th class="cart-thumbnail">&nbsp;</th>
+        <th>Product</th>
+        <th>Price</th>
+        ${cart.hasQuantityControl ? '<th>Quantity</th>' : ''}
+        <th>Subtotal</th>
+        ${cart.hasRemoveButton ? '<th>&nbsp;</th>' : ''}
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="cart-item">
+        <td class="cart-thumbnail"><img src="{{cart_image}}" alt="{{product_name}}" width="80" height="80" /></td>
+        <td class="cart-name">{{product_name}}</td>
+        <td class="cart-price">{{price}}</td>
+        ${cart.hasQuantityControl ? `<td class="cart-quantity">
+          <div class="product-quantity__input" style="display:flex;align-items:center;gap:var(--spacing-1)">
+            <button type="button" class="qty-btn" aria-label="Decrease">-</button>
+            <input type="number" class="qty-input" value="1" min="0" style="width:50px;text-align:center" />
+            <button type="button" class="qty-btn" aria-label="Increase">+</button>
+          </div>
+        </td>` : ''}
+        <td class="cart-subtotal">{{subtotal}}</td>
+        ${cart.hasRemoveButton ? '<td class="cart-remove"><button class="btn btn-sm" aria-label="Remove item">&times;</button></td>' : ''}
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr class="cart-totals">
+        <td colspan="${2 + (cart.hasQuantityControl ? 1 : 0) + (cart.hasRemoveButton ? 1 : 0)}" class="cart-coupon">
+          ${cart.hasCouponInput ? `<form class="coupon-form" style="display:flex;gap:var(--spacing-2)">
+            <label for="coupon-code" class="sr-only">Coupon code</label>
+            <input id="coupon-code" type="text" placeholder="Coupon code" class="form-control" style="width:auto" />
+            <button type="submit" class="btn btn-outline btn-sm">Apply</button>
+          </form>` : ''}
+        </td>
+        <td class="cart-total"><strong>{{total}}</strong></td>
+      </tr>
+    </tfoot>
+  </table>
+  ${cart.hasProceedToCheckout ? `<div class="cart-actions" style="display:flex;justify-content:space-between;margin-top:var(--spacing-4)">
+    <a href="#" class="btn btn-outline">Continue Shopping</a>
+    <a href="#" class="btn btn-primary">Proceed to Checkout</a>
+  </div>` : ''}
+</div>`;
+  }
+
+  generateCheckout(checkout: CheckoutComponent): string {
+    const layoutClass = `checkout checkout--${checkout.layout}`;
+    return `<!-- Checkout: ${checkout.layout} -->
+<div class="${layoutClass}">
+  <div class="checkout-wrapper" style="display:grid;grid-template-columns:${checkout.layout === 'two-column' ? '1.5fr 1fr' : '1fr'};gap:var(--spacing-8);align-items:start">
+    <div class="checkout-fields">
+      ${checkout.hasBillingForm ? `
+      <div class="checkout-section">
+        <h3 class="checkout-heading">Billing Details</h3>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--spacing-4)">
+          <div class="form-group"><label class="form-label">First Name</label><input type="text" class="form-control" required /></div>
+          <div class="form-group"><label class="form-label">Last Name</label><input type="text" class="form-control" required /></div>
+        </div>
+        <div class="form-group"><label class="form-label">Email Address</label><input type="email" class="form-control" required /></div>
+        <div class="form-group"><label class="form-label">Phone</label><input type="tel" class="form-control" /></div>
+        <div class="form-group"><label class="form-label">Street Address</label><input type="text" class="form-control" required /></div>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--spacing-4)">
+          <div class="form-group"><label class="form-label">City</label><input type="text" class="form-control" required /></div>
+          <div class="form-group"><label class="form-label">State</label><input type="text" class="form-control" /></div>
+          <div class="form-group"><label class="form-label">ZIP</label><input type="text" class="form-control" required /></div>
+        </div>
+      </div>` : ''}
+      ${checkout.hasShippingForm ? `
+      <div class="checkout-section">
+        <h3 class="checkout-heading">Shipping Details</h3>
+        <label style="display:flex;align-items:center;gap:var(--spacing-2);margin-bottom:var(--spacing-4)">
+          <input type="checkbox" checked /> Ship to different address?
+        </label>
+        <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:var(--spacing-4)">
+          <div class="form-group"><label class="form-label">First Name</label><input type="text" class="form-control" /></div>
+          <div class="form-group"><label class="form-label">Last Name</label><input type="text" class="form-control" /></div>
+        </div>
+        <div class="form-group"><label class="form-label">Street Address</label><input type="text" class="form-control" /></div>
+      </div>` : ''}
+      ${checkout.hasPaymentMethods ? `
+      <div class="checkout-section">
+        <h3 class="checkout-heading">Payment Method</h3>
+        <div class="payment-methods" style="display:flex;flex-direction:column;gap:var(--spacing-3)">
+          <label class="payment-option" style="display:flex;align-items:center;gap:var(--spacing-3);padding:var(--spacing-3);border:1px solid var(--color-border-default);border-radius:var(--radius-md)">
+            <input type="radio" name="payment" value="card" checked />
+            <span>Credit / Debit Card</span>
+          </label>
+          <label class="payment-option" style="display:flex;align-items:center;gap:var(--spacing-3);padding:var(--spacing-3);border:1px solid var(--color-border-default);border-radius:var(--radius-md)">
+            <input type="radio" name="payment" value="paypal" />
+            <span>PayPal</span>
+          </label>
+        </div>
+      </div>` : ''}
+      <button type="submit" class="btn btn-primary btn-block btn-lg" style="margin-top:var(--spacing-6)">Place Order</button>
+    </div>
+    ${checkout.hasOrderSummary ? `
+    <div class="checkout-summary" style="background:var(--color-background-surface);padding:var(--spacing-6);border-radius:var(--radius-lg);position:sticky;top:var(--spacing-4)">
+      <h3 class="checkout-heading">Order Summary</h3>
+      <div class="order-items" style="display:flex;flex-direction:column;gap:var(--spacing-3);margin:var(--spacing-4) 0">
+        <div class="order-item" style="display:flex;justify-content:space-between"><span>{{product_name}} &times; 1</span><span>{{price}}</span></div>
+      </div>
+      <div class="order-totals" style="border-top:1px solid var(--color-border-default);padding-top:var(--spacing-4);margin-top:var(--spacing-4)">
+        <div class="order-total" style="display:flex;justify-content:space-between;font-weight:700;font-size:var(--font-size-lg)"><span>Total</span><span>{{total}}</span></div>
+      </div>
+    </div>` : ''}
+  </div>
+</div>`;
+  }
+
+  generatePostDetail(detail: PostDetailComponent, _tokens?: ExtractedTokens, content?: ExtractedContent): string {
+    const texts = this.findTextsForNode(content, detail.figmaNodeId);
+    const title = texts.find(t => t.role === 'heading');
+
+    return `<!-- Post Detail -->
+<article class="post-detail" itemscope itemtype="https://schema.org/Article">
+  ${detail.hasFeaturedImage ? `<div class="post-detail__image">
+    <img src="{{featured_image}}" alt="${title ? this.escapeHtml(title.text) : '{{post_title}}'}" itemprop="image" loading="lazy" />
+  </div>` : ''}
+  <div class="post-detail__content">
+    <h1 class="post-detail__title" itemprop="headline">${title ? this.escapeHtml(title.text) : '{{post_title}}'}</h1>
+    <div class="post-detail__meta" style="display:flex;gap:var(--spacing-4);color:var(--color-text-secondary);font-size:var(--text-sm);margin-bottom:var(--spacing-6)">
+      <span class="post-detail__date">{{post_date}}</span>
+      <span class="post-detail__author">{{post_author}}</span>
+      <span class="post-detail__category">{{category}}</span>
+    </div>
+    ${detail.hasShareButtons ? `<div class="post-detail__share" style="display:flex;gap:var(--spacing-2);margin-bottom:var(--spacing-6)">
+      <span style="font-size:var(--text-sm);color:var(--color-text-secondary)">Share:</span>
+      <a href="#" aria-label="Share on Facebook"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></a>
+      <a href="#" aria-label="Share on Twitter"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/></svg></a>
+      <a href="#" aria-label="Share on LinkedIn"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg></a>
+    </div>` : ''}
+    <div class="post-detail__body" itemprop="articleBody" style="line-height:1.8">
+      {{post_content}}
+    </div>
+    ${detail.hasAuthorBio ? `<div class="post-detail__author-bio" style="display:flex;gap:var(--spacing-4);padding:var(--spacing-6);background:var(--color-background-surface);border-radius:var(--radius-lg);margin-top:var(--spacing-8)">
+      <img src="{{author_avatar}}" alt="{{post_author}}" width="64" height="64" style="border-radius:50%;flex-shrink:0" />
+      <div>
+        <strong>{{post_author}}</strong>
+        <p style="font-size:var(--text-sm);color:var(--color-text-secondary);margin-top:var(--spacing-2)">{{author_bio}}</p>
+      </div>
+    </div>` : ''}
+    ${detail.hasRelatedPosts ? `<div class="post-detail__related" style="margin-top:var(--spacing-8)">
+      <h3 class="section-title" style="text-align:left">Related Posts</h3>
+      <div class="grid grid--auto-fit">
+        {{related_posts}}
+      </div>
+    </div>` : ''}
+    ${detail.hasComments ? `<div class="post-detail__comments" style="margin-top:var(--spacing-8)">
+      <h3 class="section-title" style="text-align:left">Comments</h3>
+      {{comments}}
+    </div>` : ''}
+  </div>
+</article>`;
+  }
+
+  generateContainer(container: ContainerComponent): string {
+    const dirClass = container.direction === 'column' ? 'flex-col' : '';
+    const gapStyle = container.gap ? `style="gap:${container.gap}"` : '';
+    return `<!-- Container: ${container.type} -->
+<div class="container-component container-component--${container.type} ${dirClass}" ${gapStyle}>
+  {{container_content}}
+</div>`;
+  }
+
   generatePostCard(card: PostCardComponent, _tokens?: ExtractedTokens, content?: ExtractedContent): string {
     const texts = this.findTextsForNode(content, card.figmaNodeId);
     const title = texts.find(t => t.role === 'heading');
@@ -488,58 +711,116 @@ ${detail.sections?.productTabs ? `
 </article>`;
   }
 
-  generatePage(components: ComponentClassification, tokens: ExtractedTokens, content?: ExtractedContent): string {
+  generateProductGrid(cards: ProductCardComponent[], tokens: ExtractedTokens, content?: ExtractedContent): string {
+    if (cards.length === 0) return '';
+    const items = cards.map(c => this.generateProductCard(c, tokens, content)).join('\n');
+    return `<div class="product-grid grid grid--auto-fit" role="list" aria-label="Products">\n${indent(items)}\n</div>`;
+  }
+
+  generatePostGrid(cards: PostCardComponent[], tokens?: ExtractedTokens, content?: ExtractedContent): string {
+    if (cards.length === 0) return '';
+    const items = cards.map(c => this.generatePostCard(c, tokens, content)).join('\n');
+    return `<div class="post-grid grid grid--auto-fit" role="list" aria-label="Posts">\n${indent(items)}\n</div>`;
+  }
+
+  generatePage(
+    components: ComponentClassification,
+    tokens: ExtractedTokens,
+    content?: ExtractedContent,
+    options?: PageOptions,
+  ): string {
+    const opts: PageOptions = {
+      includeHeader: true, includeNavigation: true, includeHero: true,
+      includeSections: true, includeTestimonials: true, includeGalleries: true,
+      includeProductGrid: true, includeProductDetails: true, includeCTA: true,
+      includeCart: true, includeCheckout: true, includePostDetail: true,
+      includeSearch: true, includeNewsletter: true, includeContactForms: true,
+      includeContainers: true, includeFooter: true,
+      ...options,
+    };
     const parts: string[] = [
       '<div class="page-wrapper">',
       '  <!-- ===== Page generated by TypeFigma ===== -->',
     ];
 
-    if (components.headers.length > 0) {
+    if (opts.includeHeader && components.headers.length > 0) {
       parts.push(this.generateHeader(components.headers[0], tokens, content));
     }
 
-    if (components.heroes.length > 0) {
+    if (opts.includeNavigation && components.navigation.length > 0) {
+      parts.push(this.generateNavigation(components.navigation[0], tokens, content));
+    }
+
+    if (opts.includeHero && components.heroes.length > 0) {
       parts.push(this.generateHero(components.heroes[0], tokens, content));
     }
 
-    for (const section of components.sections) {
-      if (section.confidence > 0.5) {
-        parts.push(this.generateSection(section, tokens, content));
+    if (opts.includeSearch && components.searchBars.length > 0) {
+      parts.push(this.generateSearch(components.searchBars[0]));
+    }
+
+    if (opts.includeSections) {
+      for (const section of components.sections) {
+        if (section.confidence > 0.5) {
+          parts.push(this.generateSection(section, tokens, content));
+        }
       }
     }
 
-    if (components.testimonials.length > 0) {
+    if (opts.includeTestimonials && components.testimonials.length > 0) {
       parts.push(this.generateTestimonials(components.testimonials, tokens, content));
     }
 
-    if (components.galleries.length > 0) {
+    if (opts.includeCTA && components.ctaSections.length > 0) {
+      parts.push(this.generateCTA(components.ctaSections[0], tokens, content));
+    }
+
+    if (opts.includeGalleries && components.galleries.length > 0) {
       parts.push(this.generateGallery(components.galleries[0], tokens, content));
     }
 
-    if (components.productCards.length > 0) {
-      parts.push(`<div class="product-grid grid grid--auto-fit">`);
-      for (const card of components.productCards) {
-        parts.push(this.generateProductCard(card, tokens, content));
-      }
-      parts.push('</div>');
+    if (opts.includeProductGrid && components.productCards.length > 0) {
+      parts.push(this.generateProductGrid(components.productCards, tokens, content));
     }
 
-    if (components.productDetails.length > 0) {
+    if (opts.includeProductDetails && components.productDetails.length > 0) {
       for (const detail of components.productDetails) {
         parts.push(this.generateProductDetail(detail, tokens, content));
       }
     }
 
-    if (components.newsletters.length > 0) {
+    if (opts.includeCart && components.cartComponents.length > 0) {
+      parts.push(this.generateCart(components.cartComponents[0]));
+    }
+
+    if (opts.includeCheckout && components.checkoutComponents.length > 0) {
+      parts.push(this.generateCheckout(components.checkoutComponents[0]));
+    }
+
+    if (opts.includeNewsletter && components.newsletters.length > 0) {
       parts.push(this.generateNewsletter(components.newsletters[0]));
     }
 
-    if (components.contactForms.length > 0) {
+    if (opts.includeContactForms && components.contactForms.length > 0) {
       parts.push(this.generateContactForm(components.contactForms[0]));
     }
 
-    if (components.footers.length > 0) {
+    if (opts.includePostDetail && components.postDetail.length > 0) {
+      parts.push(this.generatePostDetail(components.postDetail[0], tokens, content));
+    }
+
+    if (opts.includeContainers && components.containers.length > 0) {
+      for (const container of components.containers) {
+        parts.push(this.generateContainer(container));
+      }
+    }
+
+    if (opts.includeFooter && components.footers.length > 0) {
       parts.push(this.generateFooter(components.footers[0], tokens, content));
+    }
+
+    if (components.postCards.length > 0) {
+      parts.push(this.generatePostGrid(components.postCards, tokens, content));
     }
 
     parts.push('</div>');
@@ -561,4 +842,9 @@ ${detail.sections?.productTabs ? `
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
   }
+}
+
+function indent(text: string, level: number = 1): string {
+  const pad = '  '.repeat(level);
+  return text.split('\n').map(line => line ? `${pad}${line}` : line).join('\n');
 }

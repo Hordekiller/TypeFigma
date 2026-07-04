@@ -22,6 +22,8 @@ const mockComponents: ComponentClassification = {
   sections: [],
   containers: [],
   columns: [],
+  responsiveBreakpoints: [],
+  interactionStates: [],
 };
 
 const mockTokens: ExtractedTokens = {
@@ -83,6 +85,8 @@ describe('HtmlGenerator', () => {
       checkoutComponents: [], postCards: [], postDetail: [],
       contactForms: [], searchBars: [], newsletters: [],
       sections: [], containers: [], columns: [],
+      responsiveBreakpoints: [],
+      interactionStates: [],
     };
     const html = gen.generatePage(empty, mockTokens);
     expect(html).toContain('page-wrapper');
