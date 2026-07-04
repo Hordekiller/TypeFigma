@@ -43,6 +43,22 @@ export interface FigmaAnalysis {
   designSystem?: import('./variable-extractor.js').DesignSystem;
 }
 
+export interface ResponsiveBreakpoint {
+  name: string;
+  width: number;
+  componentId: string;
+}
+
+export interface InteractionState {
+  figmaNodeId: string;
+  componentName: string;
+  states: Array<{
+    type: 'hover' | 'active' | 'disabled' | 'focus' | 'selected';
+    variantNodeId: string;
+    name: string;
+  }>;
+}
+
 export interface ComponentClassification {
   headers: HeaderComponent[];
   footers: FooterComponent[];
@@ -63,6 +79,8 @@ export interface ComponentClassification {
   sections: SectionComponent[];
   containers: ContainerComponent[];
   columns: ColumnComponent[];
+  responsiveBreakpoints: ResponsiveBreakpoint[];
+  interactionStates: InteractionState[];
 }
 
 export interface HeaderComponent {
@@ -410,6 +428,8 @@ export interface ExtractedTokens {
   transitions: TransitionTokens;
   breakpoints: Record<string, string>;
   zIndex: Record<string, number | string>;
+  opacity?: Record<string, number>;
+  blendModes?: string[];
 }
 
 export interface ColorTokens {

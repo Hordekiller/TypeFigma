@@ -23,6 +23,8 @@ import type {
   FormComponent,
   SectionComponent,
   ContainerComponent,
+  ResponsiveBreakpoint,
+  InteractionState,
 } from './types.js';
 
 interface NodeAnalysis {
@@ -73,6 +75,9 @@ export class ComponentDetector {
     const analyzed = allNodes.map(n => this.analyzeNode(n, nodeParentMap.get(n.id) ?? undefined));
     const components = this.classifyAll(allNodes, analyzed);
     const projectType = this.detectProjectType(allNodes, components);
+
+    components.responsiveBreakpoints = this.detectResponsiveBreakpoints(allNodes, components);
+    components.interactionStates = this.detectInteractionStates(allNodes);
 
     return { projectType, components };
   }
@@ -904,5 +909,98 @@ export class ComponentDetector {
     }
 
     return plugins;
+  }
+
+  private detectResponsiveBreakpoints(nodes: SceneNode[], components: ComponentClassification): ResponsiveBreakpoint[] {
+    const breakpoints: ResponsiveBreakpoint[] = [];
+    const groups = new Map<string, SceneNode[]>();
+
+    for (const node of nodes) {
+      if (!node.absoluteBoundingBox) continue;
+      const name = node.name.replace(/\s*-\s*(desktop|tablet|mobile|phone|sm|md|lg|xl)\s*$/i, '').toLowerCase();
+      if (!name) continue;
+      if (!groups.has(name)) groups.set(name, []);
+      groups.get(name)!.push(node);
+    }
+
+    for (const [, group] of groups) {
+      if (group.length < 2) continue;
+      const widths = [...new Set(group.map(n => n.absoluteBoundingBox!.width))];
+      if (widths.length < 2) continue;
+      widths.sort((a, b) => b - a);
+      for (const node of group) {
+        const w = node.absoluteBoundingBox!.width;
+        const match = node.name.match(/-\s*(desktop|tablet|mobile|phone|sm|md|lg|xl)\s*$/i);
+        const label = match ? match[1].toLowerCase() : `${w}px`;
+        breakpoints.push({ name: label, width: w, componentId: node.id });
+      }
+    }
+
+    return breakpoints;
+  }
+
+  private detectInteractionStates(nodes: SceneNode[]): InteractionState[] {
+    const result: InteractionState[] = [];
+    const componentSets = new Map<string, SceneNode[]>();
+    const componentSetIds = new Set<string>();
+
+    for (const node of nodes) {
+      if (node.type === 'COMPONENT_SET') {
+        const children = node.children ?? [];
+        const states: InteractionState['states'] = [];
+        for (const child of children) {
+          const name = child.name.toLowerCase();
+          let stateType: InteractionState['states'][0]['type'] | null = null;
+          if (name.includes('hover') || name.includes(':hover')) stateType = 'hover';
+          else if (name.includes('active') || name.includes(':active')) stateType = 'active';
+          else if (name.includes('disabled') || name.includes(':disabled')) stateType = 'disabled';
+          else if (name.includes('focus') || name.includes(':focus')) stateType = 'focus';
+          else if (name.includes('selected') || name.includes(':selected')) stateType = 'selected';
+          if (stateType) {
+            states.push({ type: stateType, variantNodeId: child.id, name: child.name });
+          }
+        }
+        if (states.length > 0) {
+          result.push({ figmaNodeId: node.id, componentName: node.name, states });
+        }
+        continue;
+      }
+
+      if (node.type === 'COMPONENT' || node.type === 'INSTANCE') {
+        if (node.variantProperties) {
+          componentSetIds.add(node.id);
+        }
+      }
+    }
+
+    for (const node of nodes) {
+      if (node.type !== 'FRAME' && node.type !== 'COMPONENT' && node.type !== 'INSTANCE') continue;
+      const name = node.name.toLowerCase();
+      const hasInteractiveChildren = (node.children ?? []).some(c => {
+        const cn = c.name.toLowerCase();
+        return cn.includes('hover') || cn.includes('active') || cn.includes('disabled') || cn.includes('focus');
+      });
+      if (!hasInteractiveChildren) continue;
+      const states: InteractionState['states'] = [];
+      for (const child of node.children ?? []) {
+        const cn = child.name.toLowerCase();
+        if (cn.includes('hover') || cn.includes(':hover')) {
+          states.push({ type: 'hover', variantNodeId: child.id, name: child.name });
+        } else if (cn.includes('active') || cn.includes(':active')) {
+          states.push({ type: 'active', variantNodeId: child.id, name: child.name });
+        } else if (cn.includes('disabled') || cn.includes(':disabled')) {
+          states.push({ type: 'disabled', variantNodeId: child.id, name: child.name });
+        } else if (cn.includes('focus') || cn.includes(':focus')) {
+          states.push({ type: 'focus', variantNodeId: child.id, name: child.name });
+        } else if (cn.includes('selected') || cn.includes(':selected')) {
+          states.push({ type: 'selected', variantNodeId: child.id, name: child.name });
+        }
+      }
+      if (states.length > 0) {
+        result.push({ figmaNodeId: node.id, componentName: node.name, states });
+      }
+    }
+
+    return result;
   }
 }

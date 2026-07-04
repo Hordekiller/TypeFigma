@@ -41,6 +41,8 @@ export class TokenExtractor {
       transitions: this.generateTransitions(),
       breakpoints: this.generateBreakpoints(),
       zIndex: this.generateZIndex(),
+      opacity: this.scanOpacity(allNodes),
+      blendModes: this.scanBlendModes(allNodes),
     };
   }
 
@@ -573,5 +575,29 @@ export class TokenExtractor {
 
   private generateZIndex(): Record<string, number | string> {
     return { '0': 0, '10': 10, '20': 20, '30': 30, '40': 40, '50': 50, auto: 'auto' };
+  }
+
+  private scanOpacity(nodes: SceneNode[]): Record<string, number> {
+    const opacityMap: Record<string, number> = {};
+    for (const node of nodes) {
+      if (node.opacity != null && node.opacity < 1) {
+        const key = `opacity-${Math.round(node.opacity * 100)}`;
+        if (!opacityMap[key]) opacityMap[key] = node.opacity;
+      }
+    }
+    if (Object.keys(opacityMap).length === 0) {
+      opacityMap['opacity-100'] = 1;
+    }
+    return opacityMap;
+  }
+
+  private scanBlendModes(nodes: SceneNode[]): string[] {
+    const modes = new Set<string>();
+    for (const node of nodes) {
+      if (node.blendMode && node.blendMode !== 'PASS_THROUGH') {
+        modes.add(node.blendMode);
+      }
+    }
+    return [...modes].sort();
   }
 }

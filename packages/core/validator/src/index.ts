@@ -733,9 +733,15 @@ export class Validator {
     };
   }
 
-  private calculateScore(errors: number, warnings: number, _total: number): number {
+  private calculateScore(errors: number, warnings: number, total: number): number {
     const errorPenalty = errors * 25;
-    const warningPenalty = warnings * 5;
-    return Math.max(0, Math.min(100, 100 - errorPenalty - warningPenalty));
+    const warningPenalty = Math.min(warnings * 2, 50);
+    const baseScore = 100 - errorPenalty - warningPenalty;
+    if (errors === 0 && warnings === 0) return 100;
+    if (errors === 0 && total > 0) {
+      const qualityBonus = Math.min(warnings, 10);
+      return Math.max(50, Math.min(100, baseScore + (10 - qualityBonus)));
+    }
+    return Math.max(0, Math.min(100, baseScore));
   }
 }
