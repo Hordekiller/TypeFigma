@@ -14,3 +14,5 @@ AGENT_PROMPT.md
 STATUS_REPORT.md
 output/
 *.zip
+.opencode_references/
+.opencode_references/

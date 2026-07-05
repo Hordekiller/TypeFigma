@@ -165,6 +165,7 @@ export interface Rect {
   y: number;
   width: number;
   height: number;
+  zIndex?: number;
 }
 
 export type Transform = [[number, number, number], [number, number, number]];

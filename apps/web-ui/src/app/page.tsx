@@ -2,8 +2,11 @@
 
 import { useState, useCallback } from 'react';
 import SectionSelector, { HierarchicalSectionSelector } from '../components/SectionSelector';
+import PreviewPanel from '../components/PreviewPanel';
+import PipelineProgress from '../components/PipelineProgress';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const PREVIEW_BASE = process.env.NEXT_PUBLIC_PREVIEW_URL || 'http://localhost:3002';
 
 const STEPS = [
   { num: 1, name: 'Fetch & Analysis', icon: '🔍' },
@@ -79,30 +82,34 @@ export default function Home() {
   const [figmaToken, setFigmaToken] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const [logs, setLogs] = useState<string[]>([]);
+  const [logs, setLogs] = useState<{ step: number; message: string }[]>([]);
   const [result, setResult] = useState<GenerateResult | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [hierarchicalSelection, setHierarchicalSelection] = useState<HierarchicalSelection | null>(null);
   const [useAdvancedMode, setUseAdvancedMode] = useState(false);
+  const [themeUrl, setThemeUrl] = useState('');
+  const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [darkMode, setDarkMode] = useState(false);
 
   const handleAnalyze = async () => {
     const trimmedUrl = figmaUrl.trim();
     if (!trimmedUrl) return;
     if (!trimmedUrl.startsWith('https://figma.com/file/') && !trimmedUrl.startsWith('https://www.figma.com/file/')) {
-      setLogs(['Invalid Figma URL. Must start with https://figma.com/file/...']);
+      setLogs([{ step: 0, message: 'ERROR: Invalid Figma URL. Must start with https://figma.com/file/...' }]);
       return;
     }
     if (!figmaToken.trim()) {
-      setLogs(['Figma API token is required']);
+      setLogs([{ step: 0, message: 'ERROR: Figma API token is required' }]);
       return;
     }
 
     setIsGenerating(true);
-    setCurrentStep(0);
+    setCurrentStep(1);
     setResult(null);
     setAnalysis(null);
-    setLogs(['Analyzing Figma design...']);
+    setThemeUrl('');
+    setLogs([{ step: 1, message: 'DONE: Analyzing Figma design...' }]);
 
     try {
       setCurrentStep(2);
@@ -120,18 +127,17 @@ export default function Home() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setLogs(prev => [...prev, `Error: ${data.error || 'Analysis failed'}`]);
+        setLogs(prev => [...prev, { step: 2, message: `ERROR: ${data.error || 'Analysis failed'}` }]);
         setIsGenerating(false);
         return;
       }
 
       setLogs(prev => [
         ...prev,
-        `Project type: ${data.projectType || 'unknown'} (${Math.round((data.confidence || 0) * 100)}% confidence)`,
-        `Recommended plugins: ${(data.recommendedPlugins || []).join(', ') || 'none'}`,
-        `Detected ${data.selectionConfig?.sections?.length || 0} possible sections`,
-        '',
-        'Analysis complete! Review and select sections below, then generate your theme.',
+        { step: 2, message: `DONE: Project type: ${data.projectType || 'unknown'} (${Math.round((data.confidence || 0) * 100)}% confidence)` },
+        { step: 2, message: `DONE: Recommended plugins: ${(data.recommendedPlugins || []).join(', ') || 'none'}` },
+        { step: 2, message: `DONE: Detected ${data.selectionConfig?.sections?.length || 0} possible sections` },
+        { step: 2, message: 'DONE: Analysis complete! Review and select sections below, then generate your theme.' },
       ]);
 
       const initialSelected = data.selectionConfig?.selected || [];
@@ -142,7 +148,7 @@ export default function Home() {
       }
       setCurrentStep(3);
     } catch (err) {
-      setLogs(prev => [...prev, `Connection error: ${err instanceof Error ? err.message : 'Unknown error'}`]);
+      setLogs(prev => [...prev, { step: 1, message: `ERROR: Connection error: ${err instanceof Error ? err.message : 'Unknown error'}` }]);
     }
 
     setIsGenerating(false);
@@ -150,7 +156,27 @@ export default function Home() {
 
   const handleGenerate = useCallback(async () => {
     setIsGenerating(true);
-    setLogs(prev => [...prev, 'Generating theme with selected sections...']);
+    setLogs(prev => [...prev, { step: 3, message: 'DONE: Generating theme with selected sections...' }]);
+    setThemeUrl('');
+
+    const eventSource = new EventSource(`${API_BASE}/api/generate/stream?figmaUrl=${encodeURIComponent(figmaUrl.trim())}&figmaToken=${encodeURIComponent(figmaToken.trim())}`);
+
+    eventSource.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+      if (data.themeUrl) {
+        setThemeUrl(`${PREVIEW_BASE}${data.themeUrl}`);
+      }
+      if (data.log) {
+        setLogs(prev => [...prev, { step: data.step || 3, message: data.log }]);
+      }
+      if (data.currentStep) {
+        setCurrentStep(data.currentStep);
+      }
+    };
+
+    eventSource.onerror = () => {
+      eventSource.close();
+    };
 
     const body: Record<string, unknown> = {
       figmaUrl: figmaUrl.trim(),
@@ -175,7 +201,7 @@ export default function Home() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setLogs(prev => [...prev, `Error: ${data.error || 'Generation failed'}`]);
+        setLogs(prev => [...prev, { step: 10, message: `ERROR: ${data.error || 'Generation failed'}` }]);
         setIsGenerating(false);
         return;
       }
@@ -183,19 +209,18 @@ export default function Home() {
       setCurrentStep(10);
       setLogs(prev => [
         ...prev,
-        `Files created: ${data.files || 0}`,
-        `Validation score: ${data.validation?.score || 0}/100`,
-        `Errors: ${data.validation?.errors || 0}, Warnings: ${data.validation?.warnings || 0}`,
-        `a11y score: ${data.validation?.accessibilityScore || 0}/100`,
-        `Duration: ${(data.duration / 1000).toFixed(1)}s`,
-        '',
-        'Theme generated successfully!',
-        data.zipPath ? `ZIP: ${data.zipPath}` : '',
-      ]);
+        { step: 10, message: `DONE: Files created: ${data.files || 0}` },
+        { step: 10, message: `DONE: Validation score: ${data.validation?.score || 0}/100` },
+        { step: 10, message: `DONE: Errors: ${data.validation?.errors || 0}, Warnings: ${data.validation?.warnings || 0}` },
+        { step: 10, message: `DONE: a11y score: ${data.validation?.accessibilityScore || 0}/100` },
+        { step: 10, message: `DONE: Duration: ${(data.duration / 1000).toFixed(1)}s` },
+        { step: 10, message: 'DONE: Theme generated successfully!' },
+        data.zipPath ? { step: 10, message: `DONE: ZIP: ${data.zipPath}` } : null,
+      ].filter(Boolean));
 
       setResult(data);
     } catch (err) {
-      setLogs(prev => [...prev, `Connection error: ${err instanceof Error ? err.message : 'Unknown error'}`]);
+      setLogs(prev => [...prev, { step: 3, message: `ERROR: Connection error: ${err instanceof Error ? err.message : 'Unknown error'}` }]);
     }
 
     setIsGenerating(false);
@@ -209,6 +234,7 @@ export default function Home() {
     setCurrentStep(0);
     setLogs([]);
     setSelectedSections([]);
+    setThemeUrl('');
   };
 
   return (

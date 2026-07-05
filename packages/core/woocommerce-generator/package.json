@@ -1,0 +1,21 @@
+{
+  "name": "@typefigma/woocommerce-generator",
+  "version": "1.0.0",
+  "description": "Generates WooCommerce templates for WordPress themes",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["woocommerce", "wordpress", "theme", "generator"],
+  "author": "TypeFigma",
+  "license": "MIT",
+  "dependencies": {
+    "@typefigma/theme-builder": "workspace:*",
+    "@typefigma/analyzer": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

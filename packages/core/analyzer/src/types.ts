@@ -59,6 +59,8 @@ export interface InteractionState {
   }>;
 }
 
+export type ProWidgetType = 'slider' | 'gallery' | 'product-grid' | 'testimonial' | 'countdown' | 'popup' | 'form-builder' | 'map' | 'video' | 'social-feed';
+
 export interface ComponentClassification {
   headers: HeaderComponent[];
   footers: FooterComponent[];
@@ -79,8 +81,9 @@ export interface ComponentClassification {
   sections: SectionComponent[];
   containers: ContainerComponent[];
   columns: ColumnComponent[];
-  responsiveBreakpoints: ResponsiveBreakpoint[];
-  interactionStates: InteractionState[];
+  responsiveBreakpoints?: ResponsiveBreakpoint[];
+  interactionStates?: InteractionState[];
+  proWidgets?: ProWidgetType[];
 }
 
 export interface HeaderComponent {
@@ -508,4 +511,9 @@ export interface BorderTokens {
 export interface TransitionTokens {
   duration: Record<string, string>;
   timing: Record<string, string>;
+  transitions?: Array<{
+    targetNode: string;
+    duration: number;
+    easing: string;
+  }>;
 }

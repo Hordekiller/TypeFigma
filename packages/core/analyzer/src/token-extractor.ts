@@ -1,4 +1,4 @@
-import type { FigmaFile, FigmaStyles, Color, SceneNode } from '@typefigma/figma-client';
+import type { FigmaFile, FigmaStyles, Color, SceneNode, EasingType } from '@typefigma/figma-client';
 import type {
   ExtractedTokens,
   ColorTokens,
@@ -38,9 +38,9 @@ export class TokenExtractor {
       borderRadius: this.buildBorderRadii(borderRadiusValues),
       shadows: this.generateShadows(allNodes, styles),
       borders: this.generateBorderTokens(),
-      transitions: this.generateTransitions(),
+      transitions: this.generateTransitions(allNodes),
       breakpoints: this.generateBreakpoints(),
-      zIndex: this.generateZIndex(),
+      zIndex: this.generateZIndex(allNodes),
       opacity: this.scanOpacity(allNodes),
       blendModes: this.scanBlendModes(allNodes),
     };
@@ -515,6 +515,19 @@ export class TokenExtractor {
     return match?.[1] ?? null;
   }
 
+  private mapEasingType(easing: EasingType): string {
+    const mapping: Record<EasingType, string> = {
+      EASE_IN: 'ease-in',
+      EASE_OUT: 'ease-out',
+      EASE_IN_AND_OUT: 'ease-in-out',
+      LINEAR: 'linear',
+      GENTLE: 'ease',
+      GENTLE_SPRING: 'cubic-bezier(0.18, 0.89, 0.32, 1.28)',
+      CUSTOM_CUBIC_BEZIER: 'cubic-bezier(0.42, 0, 0.58, 1)',
+    };
+    return mapping[easing] || 'ease';
+  }
+
   private makeTextStyle(fontFamily: string, fontSize: number, fontWeight: number, lineHeight: string, letterSpacing: string) {
     return {
       fontFamily,
@@ -557,13 +570,30 @@ export class TokenExtractor {
     };
   }
 
-  private generateTransitions(): TransitionTokens {
+  private generateTransitions(nodes: SceneNode[] = []): TransitionTokens {
+    const transitions: Array<{
+      targetNode: string;
+      duration: number;
+      easing: string;
+    }> = [];
+
+    for (const node of nodes) {
+      if (node.transitionNodeID) {
+        transitions.push({
+          targetNode: node.transitionNodeID,
+          duration: node.transitionDuration || 200,
+          easing: this.mapEasingType(node.transitionEasing || 'EASE_IN_AND_OUT'),
+        });
+      }
+    }
+
     return {
       duration: { fast: '150ms', base: '200ms', slow: '300ms', slower: '500ms' },
       timing: {
         ease: 'ease', easeIn: 'ease-in', easeOut: 'ease-out',
         easeInOut: 'ease-in-out', linear: 'linear',
       },
+      transitions,
     };
   }
 
@@ -573,8 +603,10 @@ export class TokenExtractor {
     };
   }
 
-  private generateZIndex(): Record<string, number | string> {
-    return { '0': 0, '10': 10, '20': 20, '30': 30, '40': 40, '50': 50, auto: 'auto' };
+  private generateZIndex(_nodes: SceneNode[] = []): Record<string, number | string> {
+    return {
+      '0': 0, '10': 10, '20': 20, '30': 30, '40': 40, '50': 50, auto: 'auto'
+    };
   }
 
   private scanOpacity(nodes: SceneNode[]): Record<string, number> {

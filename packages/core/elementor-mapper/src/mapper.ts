@@ -146,6 +146,14 @@ export class ElementorMapper {
       elements.push(this.createWidget('button', ctaSettings));
     }
 
+    // Handle Pro widgets in header
+    if (header.proWidgets) {
+      header.proWidgets.forEach((widget: any) => {
+        const proWidget = this.generateProWidget(widget);
+        if (proWidget) elements.push(proWidget);
+      });
+    }
+
     const bgColor = header.type === 'transparent' ? '' : '#FFFFFF';
 
     return this.createContainer({
@@ -270,33 +278,44 @@ export class ElementorMapper {
   // ── Section ───────────────────────────────────────
 
   mapSection(section: SectionComponent): ElementorNode {
+    const elements: ElementorNode[] = [];
+
+    // Add standard section content
+    elements.push(this.createContainer({
+      flex_direction: 'column',
+      align_items: 'center',
+      gap: { size: 16, unit: 'px' },
+    }, [
+      this.createWidget('heading', {
+        title: section.name,
+        header_size: 'h2',
+        align: 'center',
+        title_color: this.tokens.colors.text.primary,
+        typography_typography: 'custom',
+        font_size: { size: 36, unit: 'px' },
+        font_weight: '700',
+      }),
+      this.createWidget('text-editor', {
+        editor: '<p>Add your content here</p>',
+        align: 'center',
+        title_color: this.tokens.colors.text.secondary,
+      }),
+    ], generateId(`${section.type}-inner`)));
+
+    // Handle Pro widgets in section
+    if (section.proWidgets) {
+      section.proWidgets.forEach((widget: any) => {
+        const proWidget = this.generateProWidget(widget);
+        if (proWidget) elements.push(proWidget);
+      });
+    }
+
     return this.createContainer({
       content_width: 'boxed',
       padding: { top: 80, right: 40, bottom: 80, left: 40, unit: 'px' },
       padding_tablet: { top: 60, right: 20, bottom: 60, left: 20, unit: 'px' },
       padding_mobile: { top: 40, right: 16, bottom: 40, left: 16, unit: 'px' },
-    }, [
-      this.createContainer({
-        flex_direction: 'column',
-        align_items: 'center',
-        gap: { size: 16, unit: 'px' },
-      }, [
-        this.createWidget('heading', {
-          title: section.name,
-          header_size: 'h2',
-          align: 'center',
-          title_color: this.tokens.colors.text.primary,
-          typography_typography: 'custom',
-          font_size: { size: 36, unit: 'px' },
-          font_weight: '700',
-        }),
-        this.createWidget('text-editor', {
-          editor: '<p>Add your content here</p>',
-          align: 'center',
-          title_color: this.tokens.colors.text.secondary,
-        }),
-      ], generateId(`${section.type}-inner`)),
-    ], generateId(`section-${section.id}`));
+    }, elements, generateId(`section-${section.id}`));
   }
 
   // ── Footer ────────────────────────────────────────
@@ -342,15 +361,23 @@ export class ElementorMapper {
         justify_content: 'center',
         margin: { top: 32, right: 0, bottom: 0, left: 0, unit: 'px' },
       }, [
-        this.createWidget('form', {
-          form_name: 'newsletter',
-          button_text: 'Subscribe',
-          button_background_color: this.tokens.colors.primary['500'],
+        this.generateProWidget({
+          type: 'form',
+          name: 'newsletter',
+          submitButton: { text: 'Subscribe' },
           fields: [
-            { type: 'email', placeholder: 'Your email', required: true },
-          ],
+            { type: 'email', label: 'Email', placeholder: 'Your email', required: true }
+          ]
         }),
       ], generateId('footer-newsletter')));
+    }
+
+    // Handle Pro widgets in footer
+    if (footer.proWidgets) {
+      footer.proWidgets.forEach((widget: any) => {
+        const proWidget = this.generateProWidget(widget);
+        if (proWidget) elements.push(proWidget);
+      });
     }
 
     // Copyright bar
@@ -1332,8 +1359,77 @@ export class ElementorMapper {
   }
 
   // ═══════════════════════════════════════════════════
-  // ── General Pro Widgets ───────────────────────────
-  // ═══════════════════════════════════════════════════
+// ── General Pro Widgets ───────────────────────────
+// ═══════════════════════════════════════════════════
+
+  generateProWidget(component: any): ElementorNode | null {
+    switch (component.type) {
+      case 'slider':
+        return this.createWidget('slider', {
+          slides: component.slides?.map((slide: any) => ({
+            _id: generateId('slide'),
+            heading: slide.title || '',
+            description: slide.description || '',
+            button_text: slide.buttonText || '',
+            button_link: slide.buttonLink ? { url: slide.buttonLink } : { url: '#' },
+            background_image: slide.imageUrl ? { url: slide.imageUrl } : undefined,
+          })) || [],
+          navigation: component.navigation || 'both',
+          slide_animation: component.animation || 'fade',
+          animation_speed: component.speed || 700,
+          autoplay: component.autoplay ? 'yes' : 'no',
+          autoplay_speed: component.autoplaySpeed || 5000,
+          pause_on_hover: component.pauseOnHover ? 'yes' : 'no',
+          infinite: component.infinite ? 'yes' : 'no',
+        });
+      case 'form':
+        return this.createWidget('form', {
+          form_name: component.name || 'contact-form',
+          button_text: component.submitButton?.text || 'Submit',
+          button_background_color: this.tokens.colors.primary['500'],
+          button_background_hover_color: this.tokens.colors.primary['600'],
+          button_text_color: '#FFFFFF',
+          fields: component.fields?.map((field: any) => ({
+            field_type: field.type || 'text',
+            field_label: field.label || '',
+            placeholder: field.placeholder || '',
+            required: field.required || false,
+            width: '100%',
+            _id: generateId('field'),
+          })) || [],
+          label_position: component.layout?.labelPosition || 'top',
+          column_gap: { size: 16, unit: 'px' },
+          row_gap: { size: 16, unit: 'px' },
+        });
+      case 'price-list':
+        return this.createWidget('price-list', {
+          price_list: component.items?.map((item: any) => ({
+            _id: generateId('price-item'),
+            title: item.title || '',
+            price: item.price || '',
+            description: item.description || '',
+            image: item.imageUrl ? { url: item.imageUrl } : undefined,
+            link: item.link ? { url: item.link } : undefined,
+          })) || [],
+        });
+      case 'countdown':
+        return this.createWidget('countdown', {
+          countdown_type: 'due_date',
+          due_date: component.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          label_days: component.labels?.days || 'Days',
+          label_hours: component.labels?.hours || 'Hours',
+          label_minutes: component.labels?.minutes || 'Minutes',
+          label_seconds: component.labels?.seconds || 'Seconds',
+          show_days: component.showDays ? 'yes' : 'no',
+          show_hours: component.showHours ? 'yes' : 'no',
+          show_minutes: component.showMinutes ? 'yes' : 'no',
+          show_seconds: component.showSeconds ? 'yes' : 'no',
+          number_color: this.tokens.colors.primary['500'],
+        });
+      default:
+        return null;
+    }
+  }
 
   mapSlides(): ElementorNode {
     return this.createWidget('slides', {
