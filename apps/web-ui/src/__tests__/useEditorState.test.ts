@@ -76,7 +76,7 @@ describe('editorReducer', () => {
 
   it('default case returns state unchanged', () => {
     const initial = createInitialState(makeSet());
-    const next = editorReducer(initial, { type: 'UNKNOWN' as never });
+    const next = editorReducer(initial, { type: 'UNKNOWN' } as never);
     expect(next).toBe(initial);
   });
 });
