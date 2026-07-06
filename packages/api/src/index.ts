@@ -9,6 +9,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { createWriteStream } from 'fs';
 import archiver from 'archiver';
+import { FileAnnotationStore } from './store/index.js';
+import { createAnnotationRouter } from './routes/annotations.js';
 
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3005;
@@ -16,7 +18,10 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3005;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
+const annotationStore = new FileAnnotationStore();
 const zipStore = new Map<string, string>();
+
+app.use('/api/projects', createAnnotationRouter(annotationStore));
 
 function asyncHandler(
   fn: (req: express.Request, res: express.Response) => Promise<void>,
