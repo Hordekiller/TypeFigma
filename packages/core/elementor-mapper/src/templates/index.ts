@@ -69,12 +69,19 @@ export const SECTION_TEMPLATES: SectionTemplate[] = [
   SITEMAP_TEMPLATE,
 ];
 
+const PROJECT_TYPE_MAP: Record<string, string[]> = {
+  corporate: ['business'],
+  saas: ['business'],
+  news: ['blog'],
+};
+
 export function getSectionTemplates(projectTypes?: string[]): SectionTemplate[] {
   if (!projectTypes || projectTypes.length === 0) {
     return SECTION_TEMPLATES;
   }
+  const expanded = projectTypes.flatMap(pt => [pt, ...(PROJECT_TYPE_MAP[pt] || [])]).filter((v, i, a) => a.indexOf(v) === i);
   return SECTION_TEMPLATES.filter(t =>
-    t.relevantFor.some(r => projectTypes.includes(r)),
+    t.relevantFor.some(r => expanded.includes(r)),
   );
 }
 

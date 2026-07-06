@@ -911,7 +911,7 @@ export class ComponentDetector {
     return plugins;
   }
 
-  private detectResponsiveBreakpoints(nodes: SceneNode[], components: ComponentClassification): ResponsiveBreakpoint[] {
+  private detectResponsiveBreakpoints(nodes: SceneNode[], _components: ComponentClassification): ResponsiveBreakpoint[] {
     const breakpoints: ResponsiveBreakpoint[] = [];
     const groups = new Map<string, SceneNode[]>();
 
@@ -941,7 +941,6 @@ export class ComponentDetector {
 
   private detectInteractionStates(nodes: SceneNode[]): InteractionState[] {
     const result: InteractionState[] = [];
-    const componentSets = new Map<string, SceneNode[]>();
     const componentSetIds = new Set<string>();
 
     for (const node of nodes) {
@@ -975,7 +974,6 @@ export class ComponentDetector {
 
     for (const node of nodes) {
       if (node.type !== 'FRAME' && node.type !== 'COMPONENT' && node.type !== 'INSTANCE') continue;
-      const name = node.name.toLowerCase();
       const hasInteractiveChildren = (node.children ?? []).some(c => {
         const cn = c.name.toLowerCase();
         return cn.includes('hover') || cn.includes('active') || cn.includes('disabled') || cn.includes('focus');

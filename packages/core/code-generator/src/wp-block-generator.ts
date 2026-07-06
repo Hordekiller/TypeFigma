@@ -9,16 +9,12 @@ import type {
   GalleryComponent,
   FormComponent,
   NewsletterComponent,
-  NavigationComponent,
-  SearchComponent,
-  CTAComponent,
-  CartComponent,
-  CheckoutComponent,
+
   ProductDetailComponent,
-  PostCardComponent,
+
   PostDetailComponent,
-  ContainerComponent,
-  ColumnComponent,
+
+
   ExtractedTokens,
 } from '@typefigma/analyzer';
 
@@ -530,17 +526,16 @@ export class WpBlockGenerator {
 
   private patternFromContactForm(form: FormComponent): BlockPattern {
     const fields = form.fields?.inputs || [];
-    const fieldBlocks = fields.map(f => {
+    const textareas = form.fields?.textareas || [];
+    const fieldBlocks = [...fields, ...textareas].map(f => {
       const label = f.label || f.placeholder || 'Field';
-      const fieldType = f.type || 'text';
       const isRequired = f.required ? '{"required":true}' : '';
-      if (fieldType === 'textarea') {
-        return `<!-- wp:paragraph --><p><strong>${label}</strong></p><!-- /wp:paragraph -->\n<!-- wp:paragraph --><p><textarea placeholder="${label}" ${isRequired}></textarea></p><!-- /wp:paragraph -->`;
-      }
-      if (fieldType === 'text' || fieldType === 'email') {
+      if ('rows' in f) { // This is a FormTextareaField
+        return `<!-- wp:paragraph --><p><strong>${label}</strong></p><!-- /wp:paragraph -->\n<!-- wp:html --><textarea placeholder="${label}" ${isRequired}></textarea><!-- /wp:html -->`;
+      } else { // This is a FormInputField
+        const fieldType = f.type || 'text';
         return `<!-- wp:paragraph --><p><strong>${label}</strong></p><!-- /wp:paragraph -->\n<!-- wp:paragraph --><p><input type="${fieldType}" placeholder="${label}" ${isRequired} /></p><!-- /wp:paragraph -->`;
       }
-      return paragraphBlock(`${label}: [${fieldType}]`);
     }).join('\n');
 
     const content = groupBlock(

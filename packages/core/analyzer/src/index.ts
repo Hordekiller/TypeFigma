@@ -24,7 +24,7 @@ export class Analyzer {
     const fileKey = this.figmaClient.extractFileKey(figmaUrl);
 
     const [file, styles, variablesResp] = await Promise.all([
-      this.figmaClient.getFile(fileKey),
+      this.figmaClient.getFile(fileKey, { depth: 4 }),
       this.figmaClient.getStyles(fileKey).catch(() => undefined),
       this.figmaClient.getVariables(fileKey).catch(() => undefined),
     ]);

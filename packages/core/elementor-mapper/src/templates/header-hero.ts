@@ -1,4 +1,4 @@
-import type { SectionTemplate } from './types.js';
+import type { SectionTemplate } from '../types.js';
 
 export const HEADER_TEMPLATE: SectionTemplate = {
   key: 'header',

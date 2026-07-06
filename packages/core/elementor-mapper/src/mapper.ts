@@ -146,9 +146,9 @@ export class ElementorMapper {
       elements.push(this.createWidget('button', ctaSettings));
     }
 
-    // Handle Pro widgets in header
-    if (header.proWidgets) {
-      header.proWidgets.forEach((widget: any) => {
+    const headerAny = header as any;
+    if (headerAny.proWidgets) {
+      headerAny.proWidgets.forEach((widget: any) => {
         const proWidget = this.generateProWidget(widget);
         if (proWidget) elements.push(proWidget);
       });
@@ -302,9 +302,9 @@ export class ElementorMapper {
       }),
     ], generateId(`${section.type}-inner`)));
 
-    // Handle Pro widgets in section
-    if (section.proWidgets) {
-      section.proWidgets.forEach((widget: any) => {
+    const sectionAny = section as any;
+    if (sectionAny.proWidgets) {
+      sectionAny.proWidgets.forEach((widget: any) => {
         const proWidget = this.generateProWidget(widget);
         if (proWidget) elements.push(proWidget);
       });
@@ -367,14 +367,14 @@ export class ElementorMapper {
           submitButton: { text: 'Subscribe' },
           fields: [
             { type: 'email', label: 'Email', placeholder: 'Your email', required: true }
-          ]
-        }),
+          ],
+        }) as ElementorNode,
       ], generateId('footer-newsletter')));
     }
 
-    // Handle Pro widgets in footer
-    if (footer.proWidgets) {
-      footer.proWidgets.forEach((widget: any) => {
+    const footerAny = footer as any;
+    if (footerAny.proWidgets) {
+      footerAny.proWidgets.forEach((widget: any) => {
         const proWidget = this.generateProWidget(widget);
         if (proWidget) elements.push(proWidget);
       });

@@ -88,6 +88,7 @@ export interface SceneNode {
   minHeight?: number;
   maxHeight?: number;
   overflow?: OverflowDirection;
+  variantProperties?: Record<string, string>;
   componentProperties?: ComponentPropertyDefinition[];
   componentPropertyReferences?: Record<string, string>;
   boundVariables?: Record<string, VariableAlias | VariableAlias[]>;

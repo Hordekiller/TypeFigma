@@ -445,6 +445,10 @@ export class FigmaClient {
     } catch (err) {
       if (err instanceof FigmaApiError) throw err;
 
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        throw new Error(`Request timed out after ${attempt} attempt(s)`);
+      }
+
       if (attempt < this.maxRetries) {
         const delay = this.baseRetryDelayMs * Math.pow(2, attempt - 1) + Math.random() * 500;
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -469,16 +473,21 @@ export class FigmaClient {
       headers['Content-Type'] = 'application/json';
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 300000);
+
     return fetch(url, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeoutId));
   }
 
   private async delayBeforeRetry(error: FigmaApiError, attempt: number): Promise<void> {
     if (error.retryAfterMs) {
-      await new Promise(resolve => setTimeout(resolve, error.retryAfterMs!));
+      const cappedDelay = Math.min(error.retryAfterMs, 30000);
+      await new Promise(resolve => setTimeout(resolve, cappedDelay));
       return;
     }
     const delay = this.baseRetryDelayMs * Math.pow(2, attempt - 1) + Math.random() * 500;

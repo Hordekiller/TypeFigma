@@ -5,7 +5,7 @@ import SectionSelector, { HierarchicalSectionSelector } from '../components/Sect
 import PreviewPanel from '../components/PreviewPanel';
 import PipelineProgress from '../components/PipelineProgress';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3005';
 const PREVIEW_BASE = process.env.NEXT_PUBLIC_PREVIEW_URL || 'http://localhost:3002';
 
 const STEPS = [
@@ -95,8 +95,8 @@ export default function Home() {
   const handleAnalyze = async () => {
     const trimmedUrl = figmaUrl.trim();
     if (!trimmedUrl) return;
-    if (!trimmedUrl.startsWith('https://figma.com/file/') && !trimmedUrl.startsWith('https://www.figma.com/file/')) {
-      setLogs([{ step: 0, message: 'ERROR: Invalid Figma URL. Must start with https://figma.com/file/...' }]);
+    if (!trimmedUrl.startsWith('https://figma.com/file/') && !trimmedUrl.startsWith('https://www.figma.com/file/') && !trimmedUrl.startsWith('https://www.figma.com/design/')) {
+      setLogs([{ step: 0, message: 'ERROR: Invalid Figma URL. Must start with https://figma.com/file/... or https://www.figma.com/design/...' }]);
       return;
     }
     if (!figmaToken.trim()) {
@@ -113,7 +113,10 @@ export default function Home() {
 
     try {
       setCurrentStep(2);
-      setLogs(prev => [...prev, 'Detecting components and design tokens...']);
+      setLogs(prev => [...prev, { step: 2, message: 'Detecting components and design tokens...' }]);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 300000);
 
       const res = await fetch(`${API_BASE}/api/analyze`, {
         method: 'POST',
@@ -122,12 +125,15 @@ export default function Home() {
           figmaUrl: trimmedUrl,
           figmaToken: figmaToken.trim(),
         }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       const data = await res.json();
 
       if (!res.ok || !data.success) {
         setLogs(prev => [...prev, { step: 2, message: `ERROR: ${data.error || 'Analysis failed'}` }]);
+        setCurrentStep(0);
         setIsGenerating(false);
         return;
       }
@@ -140,6 +146,7 @@ export default function Home() {
         { step: 2, message: 'DONE: Analysis complete! Review and select sections below, then generate your theme.' },
       ]);
 
+      console.log('API Response:', data);
       const initialSelected = data.selectionConfig?.selected || [];
       setAnalysis(data);
       setSelectedSections(initialSelected);
@@ -148,7 +155,13 @@ export default function Home() {
       }
       setCurrentStep(3);
     } catch (err) {
-      setLogs(prev => [...prev, { step: 1, message: `ERROR: Connection error: ${err instanceof Error ? err.message : 'Unknown error'}` }]);
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      const display = err instanceof DOMException && err.name === 'AbortError'
+        ? 'Request timed out. The Figma file may be too large or the server is slow. Please try again or use a smaller file.'
+        : `Connection error: ${message}`;
+      setLogs(prev => [...prev, { step: 2, message: `ERROR: ${display}` }]);
+      setCurrentStep(0);
+      setIsGenerating(false);
     }
 
     setIsGenerating(false);
@@ -158,25 +171,6 @@ export default function Home() {
     setIsGenerating(true);
     setLogs(prev => [...prev, { step: 3, message: 'DONE: Generating theme with selected sections...' }]);
     setThemeUrl('');
-
-    const eventSource = new EventSource(`${API_BASE}/api/generate/stream?figmaUrl=${encodeURIComponent(figmaUrl.trim())}&figmaToken=${encodeURIComponent(figmaToken.trim())}`);
-
-    eventSource.onmessage = (e) => {
-      const data = JSON.parse(e.data);
-      if (data.themeUrl) {
-        setThemeUrl(`${PREVIEW_BASE}${data.themeUrl}`);
-      }
-      if (data.log) {
-        setLogs(prev => [...prev, { step: data.step || 3, message: data.log }]);
-      }
-      if (data.currentStep) {
-        setCurrentStep(data.currentStep);
-      }
-    };
-
-    eventSource.onerror = () => {
-      eventSource.close();
-    };
 
     const body: Record<string, unknown> = {
       figmaUrl: figmaUrl.trim(),
@@ -192,11 +186,16 @@ export default function Home() {
     }
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 300000);
+
       const res = await fetch(`${API_BASE}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       const data = await res.json();
 
@@ -215,12 +214,17 @@ export default function Home() {
         { step: 10, message: `DONE: a11y score: ${data.validation?.accessibilityScore || 0}/100` },
         { step: 10, message: `DONE: Duration: ${(data.duration / 1000).toFixed(1)}s` },
         { step: 10, message: 'DONE: Theme generated successfully!' },
-        data.zipPath ? { step: 10, message: `DONE: ZIP: ${data.zipPath}` } : null,
-      ].filter(Boolean));
+        ...(data.zipPath ? [{ step: 10, message: `DONE: ZIP: ${data.zipPath}` }] : []),
+      ]);
 
       setResult(data);
     } catch (err) {
-      setLogs(prev => [...prev, { step: 3, message: `ERROR: Connection error: ${err instanceof Error ? err.message : 'Unknown error'}` }]);
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      const display = err instanceof DOMException && err.name === 'AbortError'
+        ? 'Request timed out. The Figma file may be too large or the server is slow. Please try again or use a smaller file.'
+        : `Connection error: ${message}`;
+      setLogs(prev => [...prev, { step: 3, message: `ERROR: ${display}` }]);
+      setCurrentStep(0);
     }
 
     setIsGenerating(false);
@@ -419,11 +423,14 @@ export default function Home() {
                   <p className="text-xs mt-2">Then click Generate to run the pipeline</p>
                 </div>
               ) : (
-                logs.map((log, i) => (
-                  <div key={i} className={log.startsWith('   ') ? 'text-zinc-500 pl-4' : 'text-zinc-300'}>
-                    {log}
-                  </div>
-                ))
+                logs.map((log, i) => {
+                  const msg = typeof log === 'string' ? log : log.message;
+                  return (
+                    <div key={i} className={msg.startsWith('   ') ? 'text-zinc-500 pl-4' : 'text-zinc-300'}>
+                      {msg}
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>

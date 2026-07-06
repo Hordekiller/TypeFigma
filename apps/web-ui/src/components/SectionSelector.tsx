@@ -52,6 +52,16 @@ interface HierarchicalSelection {
   widgetOverrides: Record<string, Record<string, unknown>>;
 }
 
+const PROJECT_TYPE_MAP: Record<string, string[]> = {
+  corporate: ['business'],
+  saas: ['business'],
+  news: ['blog'],
+};
+
+function normalizeProjectType(pt: string): string[] {
+  return [pt, ...(PROJECT_TYPE_MAP[pt] || [])];
+}
+
 const CATEGORY_LABELS: Record<string, string> = {
   'basic': 'Essential',
   'theme-builder': 'Theme Builder',
@@ -95,7 +105,7 @@ export default function SectionSelector({
     const groups: Record<string, SectionOption[]> = {};
     const filtered = showAll
       ? config.sections
-      : config.sections.filter(s => !projectType || s.relevantFor.includes(projectType));
+      : config.sections.filter(s => !projectType || s.relevantFor.some(r => normalizeProjectType(projectType).includes(r)) || s.relevantFor.length === 0);
 
     for (const section of filtered) {
       const cat = section.category;
@@ -225,9 +235,9 @@ export function HierarchicalSectionSelector({
   const [showAll, setShowAll] = useState(false);
 
   const filteredTemplates = useMemo(() => {
-    return showAll
-      ? templates
-      : templates.filter(t => !projectType || t.relevantFor.includes(projectType));
+   return showAll
+       ? templates
+       : templates.filter(t => !projectType || t.relevantFor.some(r => normalizeProjectType(projectType).includes(r)) || t.relevantFor.length === 0);
   }, [templates, showAll, projectType]);
 
   const grouped = useMemo(() => {
