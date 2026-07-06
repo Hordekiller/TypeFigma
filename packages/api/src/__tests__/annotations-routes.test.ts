@@ -56,7 +56,7 @@ describe('annotation routes', () => {
       body: JSON.stringify(makeValidBody()),
     });
     expect(res.status).toBe(200);
-    const json = await res.json();
+    const json: Record<string, unknown> = await res.json() as Record<string, unknown>;
     expect(json.success).toBe(true);
   });
 
@@ -67,14 +67,14 @@ describe('annotation routes', () => {
       body: JSON.stringify({ not: 'valid' }),
     });
     expect(res.status).toBe(400);
-    const json = await res.json();
+    const json: Record<string, unknown> = await res.json() as Record<string, unknown>;
     expect(json.error).toBe('Invalid annotation set');
   });
 
   it('GET returns 404 for missing project', async () => {
     const res = await fetchUrl(`${baseUrl}/api/projects/nonexistent/annotations`);
     expect(res.status).toBe(404);
-    const json = await res.json();
+    const json: Record<string, unknown> = await res.json() as Record<string, unknown>;
     expect(json.error).toBe('Annotations not found');
   });
 
@@ -89,9 +89,9 @@ describe('annotation routes', () => {
 
     const getRes = await fetchUrl(`${baseUrl}/api/projects/proj-2/annotations`);
     expect(getRes.status).toBe(200);
-    const json = await getRes.json();
+    const json: Record<string, unknown> = await getRes.json() as Record<string, unknown>;
     expect(json.figmaFileKey).toBe('test-key');
-    expect(json.annotations).toHaveLength(1);
+    expect((json.annotations as Array<unknown>).length).toBe(1);
   });
 
   it('GET returns updated annotations after second PUT', async () => {
@@ -112,7 +112,8 @@ describe('annotation routes', () => {
     });
 
     const getRes = await fetchUrl(`${baseUrl}/api/projects/proj-3/annotations`);
-    const json = await getRes.json();
-    expect(json.annotations[0].role).toBe('footer');
+    const json: Record<string, unknown> = await getRes.json() as Record<string, unknown>;
+    const annotations = json.annotations as Array<Record<string, unknown>>;
+    expect(annotations[0].role).toBe('footer');
   });
 });
