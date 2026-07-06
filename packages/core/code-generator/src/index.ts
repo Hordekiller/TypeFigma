@@ -5,6 +5,7 @@ import { ThemeJsonGenerator } from './theme-json-generator.js';
 import { WpBlockGenerator } from './wp-block-generator.js';
 import { DtcgGenerator } from './dtcg-generator.js';
 import type { ComponentClassification, ExtractedTokens, ExtractedContent } from '@typefigma/analyzer';
+import type { AnnotationSet } from '@typefigma/annotations';
 import type { GeneratedCode, BlockPattern, BlockTemplate, TailwindOutput, ThemeJson, ThemeSettings, ThemeStyles } from './types.js';
 
 export type { GeneratedCode, BlockPattern, BlockTemplate, TailwindOutput, ThemeJson, ThemeSettings, ThemeStyles };
@@ -43,9 +44,10 @@ export class CodeGenerator {
     components: ComponentClassification,
     tokens: ExtractedTokens,
     content?: ExtractedContent,
+    annotations?: AnnotationSet,
   ): GeneratedCode {
     const result: GeneratedCode = {
-      html: this.htmlGen.generatePage(components, tokens, content),
+      html: this.htmlGen.generatePage(components, tokens, content, undefined, annotations),
       globalCss: this.cssGen.generateGlobal(tokens, this.options.minViewport, this.options.maxViewport),
       componentsCss: this.cssGen.generateComponents(tokens),
     };

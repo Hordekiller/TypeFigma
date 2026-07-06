@@ -25,7 +25,7 @@ import type {
   ExtractedContent,
   TextContent,
 } from '@typefigma/analyzer';
-import type { ComponentRole } from '@typefigma/annotations';
+import type { ComponentRole, AnnotationSet } from '@typefigma/annotations';
 
 export interface PageOptions {
   includeHeader?: boolean;
@@ -53,12 +53,18 @@ export interface HtmlGeneratorOptions {
 
 export class HtmlGenerator {
   private traceability: boolean;
+  private annotationOverrides: Map<string, ComponentRole> | null = null;
 
   constructor(options?: HtmlGeneratorOptions) {
     this.traceability = options?.traceability ?? true;
   }
 
+  private resolveRole(figmaNodeId: string, role: ComponentRole): ComponentRole {
+    return this.annotationOverrides?.get(figmaNodeId) ?? role;
+  }
+
   private buildTraceAttrs(figmaNodeId: string, name: string | undefined, role: ComponentRole): string {
+    role = this.resolveRole(figmaNodeId, role);
     if (!this.traceability) return '';
     const attrs: string[] = [];
     attrs.push(`data-tf-node-id="${this.escapeHtml(figmaNodeId)}"`);
@@ -611,7 +617,11 @@ ${detail.sections?.productTabs ? `
     tokens: ExtractedTokens,
     content?: ExtractedContent,
     options?: PageOptions,
+    annotations?: AnnotationSet,
   ): string {
+    this.annotationOverrides = annotations
+      ? new Map(annotations.annotations.map((a) => [a.figmaNodeId, a.role]))
+      : null;
     const opts: PageOptions = {
       includeHeader: true, includeNavigation: true, includeHero: true,
       includeSections: true, includeTestimonials: true, includeGalleries: true,
@@ -723,7 +733,9 @@ ${detail.sections?.productTabs ? `
     }
 
     parts.push('</div>');
-    return parts.join('\n\n');
+    const html = parts.join('\n\n');
+    this.annotationOverrides = null;
+    return html;
   }
 
   private findTextsForNode(content: ExtractedContent | undefined, nodeId: string): TextContent[] {
