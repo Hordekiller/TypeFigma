@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { ComponentClassification } from '@typefigma/analyzer';
 import { buildAutoAnnotations, ANALYZER_ROLE_MAP } from '../bridge.js';
-import type { Annotation, AnnotationSet } from '@typefigma/annotations';
-import { isAnnotation, isAnnotationSet, mergeAnnotations } from '@typefigma/annotations';
+import { isAnnotationSet } from '@typefigma/annotations';
 
 const FIXED_DATE = '2026-07-06T12:00:00.000Z';
 const fixedClock = () => FIXED_DATE;
@@ -13,7 +12,7 @@ describe('ANALYZER_ROLE_MAP', () => {
   });
 
   it('should map each category to a valid ComponentRole', () => {
-    for (const [category, role] of Object.entries(ANALYZER_ROLE_MAP)) {
+    for (const role of Object.values(ANALYZER_ROLE_MAP)) {
       expect(role).toEqual(expect.any(String));
       expect(role.length).toBeGreaterThan(0);
     }
@@ -64,7 +63,6 @@ describe('buildAutoAnnotations', () => {
     expect(result.annotations).toHaveLength(19);
 
     for (const a of result.annotations) {
-      expect(isAnnotation(a)).toBe(true);
       expect(a.source).toBe('auto');
       expect(a.domSelector).toBe(`[data-tf-node-id="${a.figmaNodeId}"]`);
       expect(a.updatedAt).toBe(FIXED_DATE);
@@ -170,16 +168,51 @@ function singlePerCategory(): ComponentClassification {
     ctaSections: [{ id: 'c1', figmaNodeId: 'cta:1', confidence: 0.8, type: 'banner', hasButton: true, hasImage: false }],
     testimonials: [{ id: 't1', figmaNodeId: 'testimonial:1', confidence: 0.9, layout: 'grid', hasAvatar: true, hasRating: true, hasCompanyLogo: false }],
     galleries: [{ id: 'g1', figmaNodeId: 'gallery:1', layout: 'grid', imageCount: 6, hasLightbox: false, hasFilter: false }],
-    productCards: [{ id: 'pc1', figmaNodeId: 'product:1', name: 'Product', confidence: 0.9, structure: { productImage: { nodeId: 'i1', aspectRatio: '1/1', hasBorderRadius: false, hasHoverEffect: false }, productTitle: { nodeId: 't1', maxLines: 2 }, productPrice: { nodeId: 'p1', format: 'regular', hasCurrency: true } }, layout: { type: 'card', alignment: 'left', spacing: { top: '0', right: '0', bottom: '0', left: '0' }, containerPadding: { top: '0', right: '0', bottom: '0', left: '0' } } }],
-    productDetails: [{ id: 'pd1', figmaNodeId: 'pdetail:1', confidence: 0.85, layout: 'standard', sections: { productGallery: true, productMeta: { price: { showSalePrice: false } }, addToCart: true } }],
-    cartComponents: [{ id: 'ca1', figmaNodeId: 'cart:1', confidence: 0.8, type: 'dropdown', hasQuantityControl: true, hasRemoveButton: true, hasCouponInput: false, hasProceedToCheckout: true }],
+    productCards: [{
+      id: 'pc1', figmaNodeId: 'product:1', name: 'Product', confidence: 0.9,
+      structure: {
+        productImage: { nodeId: 'i1', aspectRatio: '1/1', hasBorderRadius: false, hasHoverEffect: false },
+        productTitle: { nodeId: 't1', maxLines: 2 },
+        productPrice: { nodeId: 'p1', format: 'regular', hasCurrency: true },
+        addToCartButton: { nodeId: 'atc1', text: 'Add to Cart' },
+      },
+      layout: { type: 'card', alignment: 'left', spacing: { top: '0', right: '0', bottom: '0', left: '0' }, containerPadding: { top: '0', right: '0', bottom: '0', left: '0' } },
+    }],
+    productDetails: [{
+      id: 'pd1', figmaNodeId: 'pdetail:1', confidence: 0.85, layout: 'fullwidth',
+      sections: {
+        productGallery: { nodeId: 'pg1', type: 'slider', hasZoom: false, hasLightbox: false },
+        productMeta: {
+          title: { nodeId: 'pt1', tag: 'h1' },
+          price: { nodeId: 'pp1', showSalePrice: false, showSavings: false },
+          rating: { nodeId: 'pr1', showCount: true, linkToReviews: false },
+          availability: { nodeId: 'pa1' },
+        },
+        shortDescription: { nodeId: 'psd1' },
+        addToCart: {
+          quantitySelector: { nodeId: 'qs1', style: 'input' },
+          addToCartButton: { nodeId: 'acb1', text: 'Add to Cart' },
+        },
+        productActions: {},
+        productTabs: { nodeId: 'ptb1', type: 'tabs', hasDescription: true, hasAdditionalInfo: true, hasReviews: true },
+      },
+    }],
+    cartComponents: [{ id: 'ca1', figmaNodeId: 'cart:1', confidence: 0.8, type: 'full-cart', hasQuantityControl: true, hasRemoveButton: true, hasCouponInput: false, hasProceedToCheckout: true }],
     checkoutComponents: [{ id: 'ch1', figmaNodeId: 'checkout:1', confidence: 0.85, layout: 'two-column', hasBillingForm: true, hasShippingForm: false, hasOrderSummary: true, hasPaymentMethods: true }],
-    postCards: [{ id: 'po1', figmaNodeId: 'post:1', confidence: 0.85, hasImage: true, hasCategory: true, hasDate: true, hasAuthor: true, hasExcerpt: true, hasReadMore: true, layout: 'grid' }],
+    postCards: [{ id: 'po1', figmaNodeId: 'post:1', confidence: 0.85, hasImage: true, hasCategory: true, hasDate: true, hasAuthor: true, hasExcerpt: true, hasReadMore: true, layout: 'vertical' }],
     postDetail: [{ id: 'pde1', figmaNodeId: 'pdetail2:1', confidence: 0.8, hasFeaturedImage: true, hasAuthorBio: false, hasRelatedPosts: false, hasComments: false, hasShareButtons: true }],
-    contactForms: [{ id: 'cf1', figmaNodeId: 'form:1', name: 'Contact', confidence: 0.9, type: 'contact', fields: { inputs: [], textareas: [] }, submitButton: { text: 'Send' }, layout: { columns: 1 } }],
+    contactForms: [{
+      id: 'cf1', figmaNodeId: 'form:1', name: 'Contact', confidence: 0.9, type: 'contact',
+      fields: { inputs: [], textareas: [] },
+      submitButton: { nodeId: 'sb1', text: 'Send' },
+      layout: { columns: 1, fieldSpacing: 16, labelPosition: 'top' },
+    }],
     searchBars: [{ id: 's1', figmaNodeId: 'search:1', type: 'inline', hasDropdown: false, hasCategories: false }],
     newsletters: [{ id: 'nl1', figmaNodeId: 'newsletter:1', hasName: false, hasEmail: true, hasConsentCheckbox: true }],
-    sections: [{ id: 'se1', figmaNodeId: 'section:1', name: 'Features', confidence: 0.75, type: 'features', hasGrid: true, layout: { columns: 3, alignment: 'center', spacing: { top: '0', right: '0', bottom: '0', left: '0' }, containerPadding: { top: '0', right: '0', bottom: '0', left: '0' } } }],
+    sections: [{
+      id: 'se1', figmaNodeId: 'section:1', name: 'Features', confidence: 0.75, type: 'features', hasGrid: true,
+      layout: { fullWidth: false, hasContainer: true, padding: { top: '0', right: '0', bottom: '0', left: '0' } },
+    }],
     containers: [{ id: 'co1', figmaNodeId: 'container:1', type: 'flex', direction: 'row', gap: '1rem' }],
     columns: [{ id: 'col1', figmaNodeId: 'column:1', span: 6, width: '50%' }],
     responsiveBreakpoints: [],

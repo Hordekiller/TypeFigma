@@ -66,7 +66,7 @@ const FIXTURE_CLASSIFICATION: ComponentClassification = {
   sections: [{
     id: 'se1', figmaNodeId: 'fig:4', name: 'Features', confidence: 0.75,
     type: 'features', hasGrid: true,
-    layout: { columns: 3, alignment: 'center', spacing: { top: '0', right: '0', bottom: '0', left: '0' }, containerPadding: { top: '0', right: '0', bottom: '0', left: '0' } },
+    layout: { fullWidth: false, hasContainer: true, padding: { top: '0', right: '0', bottom: '0', left: '0' } },
   }],
   navigation: [],
   ctaSections: [],
