@@ -512,4 +512,112 @@ d48ed2f feat(web-ui): debounced annotation save + save status in RolePicker
 5b49795 fix: typecheck errors in annotations-routes test
 ```
 
+### Verification (appended 2026-07-06)
+
+```
+$ grep -n "^## Phase" AUDIT_REPORT.md
+1:## Phase A — Annotations Package Results
+134:## Phase B — Traceability & Auto-Annotation Results
+304:## Phase C — Live Editor: Selection + RolePicker (web-ui)
+470:## Phase D — Annotation Persistence + Regeneration Loop Summary
+```
+
+**Per-package test counts (raw vitest output):**
+
+| Package | Phase C | Phase D | Delta |
+|---|---|---|---|
+| analyzer | 16 | 16 | 0 |
+| annotations | 49 | 49 | 0 |
+| annotation-bridge | 14 | 14 | 0 |
+| code-generator | 79 | 82 | **+3** (roundtrip.test.ts) |
+| editor-protocol | 47 | 47 | 0 |
+| elementor-mapper | 340 | 340 | 0 |
+| figma-client | 62 | 62 | 0 |
+| theme-builder | 66 | 66 | 0 |
+| validator | 12 | 12 | 0 |
+| woocommerce-generator | 5 | 5 | 0 |
+| cli | 4 | 4 | 0 |
+| api | — | 9 | **+9** (new package) |
+| web-ui | 25 | 30 | **+5** (persistence.test.tsx) |
+| **Total** | **719** | **736** | **+17** |
+
+**New tests added in Phase D:**
+- `packages/api/src/__tests__/store.test.ts` — 4 tests (FileAnnotationStore CRUD)
+- `packages/api/src/__tests__/annotations-routes.test.ts` — 5 tests (PUT/GET routes)
+- `packages/core/code-generator/src/__tests__/roundtrip.test.ts` — 3 tests (annotation override round-trips)
+- `apps/web-ui/src/__tests__/persistence.test.tsx` — 5 tests (debounced save, error state, manual save)
+
+**719 baseline + 9 (api) + 3 (code-generator roundtrip) + 5 (web-ui persistence) = 736**
+
+**NOTE on code-generator count:** Phase C reported 79 tests (7 files). Phase D added `roundtrip.test.ts` (3 tests). Total is now 82. The previous Phase D draft incorrectly showed `Tests 14 passed` for code-generator — that was from running only `roundtrip.test.ts` in isolation. Correct full-suite count: 82.
+
+**Typecheck (npm):**
+
+```
+$ npm run typecheck 2>&1; echo "EXIT_CODE=$?"
+> typefigma@1.0.0 typecheck
+> npm run typecheck --workspaces
+
+> @typefigma/analyzer@0.1.0 typecheck
+> tsc --noEmit
+
+> @typefigma/annotation-bridge@0.1.0 typecheck
+> tsc --noEmit
+
+> @typefigma/annotations@0.1.0 typecheck
+> tsc --noEmit
+
+> @typefigma/code-generator@0.1.0 typecheck
+> tsc --noEmit
+
+> docs-generator@1.0.0 typecheck
+> tsc --noEmit
+
+> @typefigma/editor-protocol@0.1.0 typecheck
+> tsc --noEmit
+
+> @typefigma/elementor-mapper@0.1.0 typecheck
+> tsc --noEmit
+
+> @typefigma/figma-client@0.1.0 typecheck
+> tsc --noEmit
+
+> @typefigma/theme-builder@0.1.0 typecheck
+> tsc --noEmit
+
+> @typefigma/validator@0.1.0 typecheck
+> tsc --noEmit
+
+> @typefigma/woocommerce-generator@1.0.0 typecheck
+> tsc --noEmit
+
+> @typefigma/cli@0.1.0 typecheck
+> tsc --noEmit
+
+> @typefigma/api@0.1.0 typecheck
+> tsc --noEmit
+
+> @typefigma/figma-plugin@1.0.0 typecheck
+> tsc --noEmit
+
+> @typefigma/web-ui@0.1.0 typecheck
+> tsc --noEmit
+EXIT_CODE=0
+```
+
+**NOTE:** `pnpm -r typecheck` fails (EXIT_CODE=1) because this repo uses npm workspaces, not pnpm workspaces. The working command is `npm run typecheck`.
+
+**Skills report:**
+
+- SKILL AVAILABLE: wp-rest-api — loaded via `skill` tool; content used to validate PUT/GET route design.
+- SKILL AVAILABLE: wp-block-development — loaded via `skill` tool; content used to validate block registration patterns.
+- SKILL UNAVAILABLE: figma-use — installed to `~/.agents/skills/figma-use` and symlinked to `~/.claude/skills/`, but the `skill` tool only loads from a pre-built list set at session start; new skills cannot be loaded mid-session.
+- SKILL UNAVAILABLE: figma-generate-design — same session-limitation as figma-use.
+- SKILL UNAVAILABLE: figma-generate-library — same session-limitation as figma-use.
+- SKILL UNAVAILABLE: figma-implement-design — `npx skills add` timed out on interactive prompt; never installed.
+- SKILL UNAVAILABLE: Anthropic webapp-testing — never attempted (no install command executed).
+- SKILL UNAVAILABLE: Anthropic frontend-design — never attempted (no install command executed).
+
+**Commit:** fbf5a2b docs(audit): restore Phase A-C sections and append Phase D
+
 
