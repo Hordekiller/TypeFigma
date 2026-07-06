@@ -98,6 +98,20 @@ describe('CodeGenerator', () => {
     expect(result.blockTemplates).toBeDefined();
   });
 
+  it('should include traceability attributes by default', () => {
+    const gen = new CodeGenerator();
+    const result = gen.generate(mockComponents, mockTokens);
+    expect(result.html).toContain('data-tf-node-id="h1"');
+    expect(result.html).toContain('data-tf-role="header"');
+  });
+
+  it('should omit traceability attributes when disabled', () => {
+    const gen = new CodeGenerator({ traceability: false });
+    const result = gen.generate(mockComponents, mockTokens);
+    expect(result.html).not.toContain('data-tf-node-id');
+    expect(result.html).not.toContain('data-tf-role');
+  });
+
   it('should use custom viewport sizes', () => {
     const gen = new CodeGenerator({ minViewport: '320px', maxViewport: '1920px' });
     const result = gen.generate(mockComponents, mockTokens);

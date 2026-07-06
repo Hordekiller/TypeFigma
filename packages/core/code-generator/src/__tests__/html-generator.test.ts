@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { HtmlGenerator } from '../html-generator.js';
-import type { ComponentClassification, ExtractedTokens } from '@typefigma/analyzer';
+import type { ComponentClassification, ExtractedTokens, NavigationComponent, TestimonialComponent } from '@typefigma/analyzer';
 
 const mockComponents: ComponentClassification = {
   headers: [{ id: 'h1', figmaNodeId: 'h1', name: 'Header', confidence: 0.95, type: 'sticky', hasLogo: true, hasMenu: true, hasSearch: false, hasCTA: true, layout: { alignment: 'space-between', height: '80px', padding: { top: '1rem', right: '2rem', bottom: '1rem', left: '2rem' } } }],
@@ -54,6 +54,64 @@ const mockTokens: ExtractedTokens = {
 
 describe('HtmlGenerator', () => {
   const gen = new HtmlGenerator();
+  const genNoTrace = new HtmlGenerator({ traceability: false });
+
+  it('should include data-tf-node-id on header root element', () => {
+    const html = gen.generateHeader(mockComponents.headers[0], mockTokens);
+    expect(html).toContain('data-tf-node-id="h1"');
+    expect(html).toContain('data-tf-name="Header"');
+    expect(html).toContain('data-tf-role="header"');
+  });
+
+  it('should include data-tf-node-id on hero root element', () => {
+    const html = gen.generateHero(mockComponents.heroes[0], mockTokens);
+    expect(html).toContain('data-tf-node-id="hero1"');
+    expect(html).toContain('data-tf-name="Hero Section"');
+    expect(html).toContain('data-tf-role="hero"');
+  });
+
+  it('should include data-tf-node-id on footer root element', () => {
+    const html = gen.generateFooter(mockComponents.footers[0], mockTokens);
+    expect(html).toContain('data-tf-node-id="f1"');
+    expect(html).toContain('data-tf-name="Footer"');
+    expect(html).toContain('data-tf-role="footer"');
+  });
+
+  it('should include data-tf-node-id on navigation root element', () => {
+    const navComp: NavigationComponent = { id: 'n1', figmaNodeId: 'n1', type: 'horizontal', items: 5, hasDropdown: false };
+    const navCompList: ComponentClassification = { ...mockComponents, navigation: [navComp] };
+    const html = gen.generateNavigation(navComp, mockTokens);
+    expect(html).toContain('data-tf-node-id="n1"');
+    expect(html).toContain('data-tf-role="nav-menu"');
+  });
+
+  it('should include data-tf-node-id on testimonial cards', () => {
+    const t1: TestimonialComponent = { id: 't1', figmaNodeId: 't1', confidence: 0.9, layout: 'grid', hasAvatar: false, hasRating: true, hasCompanyLogo: false };
+    const t2: TestimonialComponent = { id: 't2', figmaNodeId: 't2', confidence: 0.85, layout: 'grid', hasAvatar: true, hasRating: false, hasCompanyLogo: false };
+    const html = gen.generateTestimonials([t1, t2], mockTokens);
+    expect(html).toContain('data-tf-node-id="t1"');
+    expect(html).toContain('data-tf-node-id="t2"');
+    expect(html).toContain('data-tf-role="testimonial"');
+  });
+
+  it('should produce byte-identical output when traceability is false', () => {
+    const noTraceGen = new HtmlGenerator({ traceability: false });
+    const oldGen = new HtmlGenerator({ traceability: false });
+    const html1 = noTraceGen.generateHeader(mockComponents.headers[0], mockTokens);
+    const html2 = oldGen.generateHeader(mockComponents.headers[0], mockTokens);
+    expect(html1).toBe(html2);
+    expect(html1).not.toContain('data-tf-node-id');
+  });
+
+  it('should escape special characters in data-tf-name', () => {
+    const headerWithQuotes: HeaderComponent = {
+      ...mockComponents.headers[0],
+      name: 'Header "Special" & <More>',
+      figmaNodeId: 'escape-test',
+    };
+    const html = gen.generateHeader(headerWithQuotes, mockTokens);
+    expect(html).toContain('data-tf-name="Header &quot;Special&quot; &amp; &lt;More&gt;"');
+  });
 
   it('should generate a complete HTML page', () => {
     const html = gen.generatePage(mockComponents, mockTokens);

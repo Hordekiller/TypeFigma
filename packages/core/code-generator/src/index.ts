@@ -10,6 +10,7 @@ import type { GeneratedCode, BlockPattern, BlockTemplate, TailwindOutput, ThemeJ
 export type { GeneratedCode, BlockPattern, BlockTemplate, TailwindOutput, ThemeJson, ThemeSettings, ThemeStyles };
 
 export interface GeneratorOptions {
+  traceability?: boolean;
   includeDtcg?: boolean;
   includeThemeJson?: boolean;
   includeTailwind?: boolean;
@@ -24,9 +25,10 @@ export class CodeGenerator {
   private options: GeneratorOptions;
 
   constructor(options: GeneratorOptions = {}) {
-    this.htmlGen = new HtmlGenerator();
+    this.htmlGen = new HtmlGenerator({ traceability: options.traceability });
     this.cssGen = new CssGenerator();
     this.options = {
+      traceability: true,
       includeDtcg: false,
       includeThemeJson: false,
       includeTailwind: false,

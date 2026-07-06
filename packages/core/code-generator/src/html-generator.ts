@@ -25,6 +25,7 @@ import type {
   ExtractedContent,
   TextContent,
 } from '@typefigma/analyzer';
+import type { ComponentRole } from '@typefigma/annotations';
 
 export interface PageOptions {
   includeHeader?: boolean;
@@ -46,9 +47,31 @@ export interface PageOptions {
   includeFooter?: boolean;
 }
 
+export interface HtmlGeneratorOptions {
+  traceability?: boolean;
+}
+
 export class HtmlGenerator {
+  private traceability: boolean;
+
+  constructor(options?: HtmlGeneratorOptions) {
+    this.traceability = options?.traceability ?? true;
+  }
+
+  private buildTraceAttrs(figmaNodeId: string, name: string | undefined, role: ComponentRole): string {
+    if (!this.traceability) return '';
+    const attrs: string[] = [];
+    attrs.push(`data-tf-node-id="${this.escapeHtml(figmaNodeId)}"`);
+    if (name) {
+      attrs.push(`data-tf-name="${this.escapeHtml(name)}"`);
+    }
+    attrs.push(`data-tf-role="${role}"`);
+    return ' ' + attrs.join(' ');
+  }
+
   generateHeader(header: HeaderComponent, _tokens: ExtractedTokens, content?: ExtractedContent): string {
     const texts = this.findTextsForNode(content, header.figmaNodeId);
+    const trace = this.buildTraceAttrs(header.figmaNodeId, header.name, 'header');
 
     const logoHtml = header.hasLogo
       ? '<div class="logo"><a href="/" aria-label="{{site_name}} - Home"><img src="{{site_logo}}" alt="{{site_name}}" width="180" height="40" /></a></div>'
@@ -74,7 +97,7 @@ export class HtmlGenerator {
       : '';
 
     return `<!-- Header: ${header.name} -->
-<header class="site-header header--${header.type}" role="banner">
+<header${trace} class="site-header header--${header.type}" role="banner">
   <div class="container">
     <div class="header-inner">
       ${logoHtml}
@@ -93,6 +116,7 @@ export class HtmlGenerator {
 
   generateHero(hero: HeroComponent, _tokens: ExtractedTokens, content?: ExtractedContent): string {
     const texts = this.findTextsForNode(content, hero.figmaNodeId);
+    const trace = this.buildTraceAttrs(hero.figmaNodeId, hero.name, 'hero');
     const heading = texts.find(t => t.role === 'heading');
     const body = texts.filter(t => t.role === 'body');
     const buttons = texts.filter(t => t.role === 'button');
@@ -112,7 +136,7 @@ export class HtmlGenerator {
       : '';
 
     return `<!-- Hero: ${hero.name} -->
-<section class="${heroClass}" aria-label="${heading ? this.escapeHtml(heading.text) : 'Hero section'}">
+<section${trace} class="${heroClass}" aria-label="${heading ? this.escapeHtml(heading.text) : 'Hero section'}">
   <div class="container">
     <div class="hero-content" style="${alignmentStyle}">
       <h1 class="hero-title">${heading ? this.escapeHtml(heading.text) : 'Your Main Headline'}</h1>
@@ -138,10 +162,11 @@ export class HtmlGenerator {
 
   generateNavigation(nav: NavigationComponent, _tokens: ExtractedTokens, content?: ExtractedContent): string {
     const texts = this.findTextsForNode(content, nav.figmaNodeId);
+    const trace = this.buildTraceAttrs(nav.figmaNodeId, undefined, 'nav-menu');
     const items = texts.filter(t => t.role === 'link');
 
     return `<!-- Navigation -->
-<nav class="main-nav main-nav--${nav.type || 'horizontal'}" aria-label="Navigation">
+<nav${trace} class="main-nav main-nav--${nav.type || 'horizontal'}" aria-label="Navigation">
   <ul class="nav-menu">
     ${items.length > 0
       ? items.map(t => `<li class="menu-item"><a href="${t.hyperlink || '#'}">${this.escapeHtml(t.text)}</a></li>`).join('\n    ')
@@ -156,13 +181,14 @@ export class HtmlGenerator {
 
   generateSection(section: SectionComponent, _tokens?: ExtractedTokens, content?: ExtractedContent): string {
     const texts = this.findTextsForNode(content, section.figmaNodeId);
+    const trace = this.buildTraceAttrs(section.figmaNodeId, section.name, 'section');
     const heading = texts.find(t => t.role === 'heading');
     const body = texts.filter(t => t.role === 'body');
     const buttons = texts.filter(t => t.role === 'button');
     const hasGrid = section.hasGrid;
 
     return `<!-- ${section.name} -->
-<section class="section" aria-label="${this.escapeHtml(section.name)}">
+<section${trace} class="section" aria-label="${this.escapeHtml(section.name)}">
   <div class="container">
     <div class="section-header">
       <h2 class="section-title">${heading ? this.escapeHtml(heading.text) : this.escapeHtml(section.name)}</h2>
@@ -181,6 +207,7 @@ export class HtmlGenerator {
 
   generateFooter(footer: FooterComponent, _tokens: ExtractedTokens, content?: ExtractedContent): string {
     const texts = this.findTextsForNode(content, footer.figmaNodeId);
+    const trace = this.buildTraceAttrs(footer.figmaNodeId, footer.name, 'footer');
     const links = texts.filter(t => t.role === 'link');
     const headings = texts.filter(t => t.role === 'heading');
 
@@ -188,7 +215,7 @@ export class HtmlGenerator {
     const linksPerCol = links.length > 0 ? Math.ceil(links.length / columns.length) : 3;
 
     return `<!-- Footer: ${footer.name} -->
-<footer class="site-footer" role="contentinfo">
+<footer${trace} class="site-footer" role="contentinfo">
   <div class="container">
     <div class="footer-grid footer-grid--${footer.columns}-cols">
       ${columns.map((col, i) => {
@@ -229,6 +256,7 @@ export class HtmlGenerator {
 
   generateProductCard(card: ProductCardComponent, _tokens: ExtractedTokens, content?: ExtractedContent): string {
     const texts = this.findTextsForNode(content, card.figmaNodeId);
+    const trace = this.buildTraceAttrs(card.figmaNodeId, card.name, 'product-card');
     const title = texts.find(t => t.role === 'heading');
     const buttons = texts.filter(t => t.role === 'button');
     const descriptions = texts.filter(t => t.role === 'body');
@@ -236,7 +264,7 @@ export class HtmlGenerator {
     const badgePosition = card.structure.productBadge?.position === 'top-left' ? 'top-left' : 'top-right';
 
     return `<!-- Product Card: ${card.name} -->
-<article class="product-card product-card--${card.layout.type}" data-product-id="{{product_id}}" itemscope itemtype="https://schema.org/Product">
+<article${trace} class="product-card product-card--${card.layout.type}" data-product-id="{{product_id}}" itemscope itemtype="https://schema.org/Product">
   <div class="product-card__image-wrapper">
     <img
       src="{{featured_image}}"
@@ -294,13 +322,14 @@ export class HtmlGenerator {
 
   generateProductDetail(detail: ProductDetailComponent, _tokens: ExtractedTokens, content?: ExtractedContent): string {
     const texts = this.findTextsForNode(content, detail.figmaNodeId);
+    const trace = this.buildTraceAttrs(detail.figmaNodeId, undefined, 'product-detail');
     const title = texts.find(t => t.role === 'heading');
     const body = texts.filter(t => t.role === 'body');
     const buttons = texts.filter(t => t.role === 'button');
     const galleryCount = 4;
 
     return `<!-- Product Detail -->
-<div class="product-detail product-detail--${detail.layout}" itemscope itemtype="https://schema.org/Product">
+<div${trace} class="product-detail product-detail--${detail.layout}" itemscope itemtype="https://schema.org/Product">
   <div class="product-detail__gallery">
     ${detail.sections?.productGallery ? `
     <div class="product-gallery">
@@ -379,11 +408,12 @@ ${detail.sections?.productTabs ? `
   generateTestimonials(items: TestimonialComponent[], _tokens: ExtractedTokens, content?: ExtractedContent): string {
     const cards = items.map(t => {
       const texts = this.findTextsForNode(content, t.figmaNodeId);
+      const trace = this.buildTraceAttrs(t.figmaNodeId, undefined, 'testimonial');
       const author = texts.find(tx => tx.role === 'heading' || tx.role === 'body');
       const body = texts.filter(tx => tx.role === 'body');
 
       return `
-    <div class="testimonial-card">
+    <div${trace} class="testimonial-card">
       ${t.hasAvatar ? '<img src="{{avatar}}" alt="" class="testimonial-card__avatar" loading="lazy" width="64" height="64" />' : ''}
       ${t.hasRating ? '<div class="stars" aria-label="5 out of 5 stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>' : ''}
       <blockquote class="testimonial-card__text">${body[0]?.text || 'Amazing product! This completely transformed our workflow.'}</blockquote>
@@ -407,10 +437,11 @@ ${detail.sections?.productTabs ? `
   }
 
   generateGallery(gallery: GalleryComponent, _tokens?: ExtractedTokens, _content?: ExtractedContent): string {
+    const trace = this.buildTraceAttrs(gallery.figmaNodeId, undefined, 'gallery');
     const imageCount = gallery.imageCount || 6;
 
     return `<!-- Gallery -->
-<section class="section" aria-label="Gallery">
+<section${trace} class="section" aria-label="Gallery">
   <div class="container">
     <div class="section-header">
       <h2 class="section-title">Gallery</h2>
@@ -429,8 +460,9 @@ ${detail.sections?.productTabs ? `
   }
 
   generateNewsletter(_newsletter: NewsletterComponent): string {
+    const trace = this.buildTraceAttrs(_newsletter.figmaNodeId, undefined, 'newsletter');
     return `<!-- Newsletter -->
-<section class="section section--muted" aria-label="Newsletter">
+<section${trace} class="section section--muted" aria-label="Newsletter">
   <div class="container">
     <div class="newsletter-wrapper" style="max-width:480px;margin:0 auto;text-align:center">
       <h2 class="section-title">Stay Updated</h2>
@@ -449,11 +481,12 @@ ${detail.sections?.productTabs ? `
   }
 
   generateContactForm(form: FormComponent): string {
+    const trace = this.buildTraceAttrs(form.figmaNodeId, form.name, 'contact-form');
     const fields = form.fields?.inputs || [];
     const textareas = form.fields?.textareas || [];
 
     return `<!-- Contact Form: ${form.name} -->
-<section class="section section--muted" aria-label="Contact form">
+<section${trace} class="section section--muted" aria-label="Contact form">
   <div class="container">
     <div class="form-wrapper" style="max-width:600px;margin:0 auto">
       <div class="section-header">
@@ -480,20 +513,13 @@ ${detail.sections?.productTabs ? `
 </section>`;
   }
 
-
-
-
-
-
-
-
-
   generatePostDetail(detail: PostDetailComponent, _tokens?: ExtractedTokens, content?: ExtractedContent): string {
     const texts = this.findTextsForNode(content, detail.figmaNodeId);
+    const trace = this.buildTraceAttrs(detail.figmaNodeId, undefined, 'blog-post');
     const title = texts.find(t => t.role === 'heading');
 
     return `<!-- Post Detail -->
-<article class="post-detail" itemscope itemtype="https://schema.org/Article">
+<article${trace} class="post-detail" itemscope itemtype="https://schema.org/Article">
   ${detail.hasFeaturedImage ? `<div class="post-detail__image">
     <img src="{{featured_image}}" alt="${title ? this.escapeHtml(title.text) : '{{post_title}}'}" itemprop="image" loading="lazy" />
   </div>` : ''}
@@ -535,21 +561,23 @@ ${detail.sections?.productTabs ? `
   }
 
   generateContainer(container: ContainerComponent): string {
+    const trace = this.buildTraceAttrs(container.figmaNodeId, undefined, 'container');
     const dirClass = container.direction === 'column' ? 'flex-col' : '';
     const gapStyle = container.gap ? `style="gap:${container.gap}"` : '';
     return `<!-- Container: ${container.type} -->
-<div class="container-component container-component--${container.type} ${dirClass}" ${gapStyle}>
+<div${trace} class="container-component container-component--${container.type} ${dirClass}" ${gapStyle}>
   {{container_content}}
 </div>`;
   }
 
   generatePostCard(card: PostCardComponent, _tokens?: ExtractedTokens, content?: ExtractedContent): string {
     const texts = this.findTextsForNode(content, card.figmaNodeId);
+    const trace = this.buildTraceAttrs(card.figmaNodeId, undefined, 'blog-list');
     const title = texts.find(t => t.role === 'heading');
     const body = texts.filter(t => t.role === 'body');
 
     return `<!-- Post Card -->
-<article class="post-card">
+<article${trace} class="post-card">
   ${card.hasImage ? `<div class="post-card__image">
     <a href="{{permalink}}"><img src="{{featured_image}}" alt="${title ? this.escapeHtml(title.text) : '{{post_title}}'}" loading="lazy" /></a>
   </div>` : ''}
@@ -715,8 +743,9 @@ ${detail.sections?.productTabs ? `
   }
 
   generateSearch(_search: SearchComponent): string {
+    const trace = this.buildTraceAttrs(_search.figmaNodeId, undefined, 'search-form');
     return `<!-- Search -->
-<div class="search-form">
+<div${trace} class="search-form">
   <form role="search" method="get" action="{{search_url}}">
     <label for="search-input" class="sr-only">Search for:</label>
     <input id="search-input" type="search"     placeholder="Search..." value="{{search_query}}" name="s" />
@@ -729,13 +758,14 @@ ${detail.sections?.productTabs ? `
 
   generateCTA(cta: CTAComponent, _tokens?: ExtractedTokens, content?: ExtractedContent): string {
     const texts = this.findTextsForNode(content, cta.figmaNodeId);
+    const trace = this.buildTraceAttrs(cta.figmaNodeId, undefined, 'cta');
     const heading = texts.find(t => t.role === 'heading');
     const body = texts.filter(t => t.role === 'body');
     const buttons = texts.filter(t => t.role === 'button');
 
     const ctaClass = `cta cta--${cta.type}`;
     return `<!-- CTA: ${cta.type} -->
-<section class="${ctaClass} section section--muted" aria-label="${heading ? this.escapeHtml(heading.text) : 'Call to action'}">
+<section${trace} class="${ctaClass} section section--muted" aria-label="${heading ? this.escapeHtml(heading.text) : 'Call to action'}">
   <div class="container">
     <div class="cta-wrapper" style="text-align:center;max-width:640px;margin:0 auto">
       <h2 class="section-title">${heading ? this.escapeHtml(heading.text) : 'Ready to Get Started?'}</h2>
@@ -754,9 +784,10 @@ ${detail.sections?.productTabs ? `
   }
 
   generateCart(cart: CartComponent, _tokens?: ExtractedTokens): string {
+    const trace = this.buildTraceAttrs(cart.figmaNodeId, undefined, 'cart');
     const cartClass = `cart cart--${cart.type}`;
     return `<!-- Cart: ${cart.type} -->
-<div class="${cartClass}">
+<div${trace} class="${cartClass}">
   <table class="cart-table">
     <thead>
       <tr>
@@ -805,9 +836,10 @@ ${detail.sections?.productTabs ? `
   }
 
   generateCheckout(checkout: CheckoutComponent): string {
+    const trace = this.buildTraceAttrs(checkout.figmaNodeId, undefined, 'checkout');
     const layoutClass = `checkout checkout--${checkout.layout}`;
     return `<!-- Checkout: ${checkout.layout} -->
-<div class="${layoutClass}">
+<div${trace} class="${layoutClass}">
   <div class="checkout-wrapper" style="display:grid;grid-template-columns:${checkout.layout === 'two-column' ? '1.5fr 1fr' : '1fr'};gap:var(--spacing-8);align-items:start">
     <div class="checkout-fields">
       ${checkout.hasBillingForm ? `
