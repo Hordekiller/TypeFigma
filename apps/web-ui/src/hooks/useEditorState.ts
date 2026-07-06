@@ -1,6 +1,8 @@
-import { useReducer, useCallback } from 'react';
+import { useReducer, useCallback, useEffect, useRef, useState } from 'react';
 import type { Annotation, AnnotationSet, ComponentRole } from '@typefigma/annotations';
 import { upsertAnnotation } from '@typefigma/annotations';
+
+export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 export interface EditorState {
   annotationSet: AnnotationSet;
@@ -52,8 +54,35 @@ export function createInitialState(annotationSet: AnnotationSet): EditorState {
   };
 }
 
-export function useEditorState(initialAnnotationSet: AnnotationSet) {
+export interface SaveOptions {
+  projectId: string;
+  apiBaseUrl?: string;
+}
+
+async function saveAnnotationSet(
+  annotationSet: AnnotationSet,
+  options: SaveOptions,
+): Promise<void> {
+  const baseUrl = options.apiBaseUrl || '';
+  const res = await fetch(`${baseUrl}/api/projects/${options.projectId}/annotations`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(annotationSet),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.error || `HTTP ${res.status}`);
+  }
+}
+
+export function useEditorState(
+  initialAnnotationSet: AnnotationSet,
+  saveOptions?: SaveOptions,
+) {
   const [state, dispatch] = useReducer(editorReducer, initialAnnotationSet, createInitialState);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const isMounted = useRef(true);
 
   const select = useCallback((nodeId: string) => {
     dispatch({ type: 'SELECT', nodeId });
@@ -82,6 +111,50 @@ export function useEditorState(initialAnnotationSet: AnnotationSet) {
     return JSON.stringify(state.annotationSet, null, 2);
   }, [state.annotationSet]);
 
+  const manualSave = useCallback(async () => {
+    if (!saveOptions) return;
+    setSaveStatus('saving');
+    setSaveError(null);
+    try {
+      await saveAnnotationSet(state.annotationSet, saveOptions);
+      if (isMounted.current) {
+        setSaveStatus('saved');
+      }
+    } catch (err) {
+      if (isMounted.current) {
+        setSaveStatus('error');
+        setSaveError(err instanceof Error ? err.message : 'Save failed');
+      }
+    }
+  }, [state.annotationSet, saveOptions]);
+
+  useEffect(() => {
+    if (!saveOptions) return;
+    const timer = setTimeout(async () => {
+      setSaveStatus('saving');
+      try {
+        await saveAnnotationSet(state.annotationSet, saveOptions);
+        if (isMounted.current) {
+          setSaveStatus('saved');
+        }
+      } catch (err) {
+        if (isMounted.current) {
+          setSaveStatus('error');
+          setSaveError(err instanceof Error ? err.message : 'Save failed');
+        }
+      }
+    }, 1000);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [state.annotationSet, saveOptions]);
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   return {
     state,
     dispatch,
@@ -91,5 +164,8 @@ export function useEditorState(initialAnnotationSet: AnnotationSet) {
     setAnnotations,
     getAnnotationByNodeId,
     getExportPayload,
+    saveStatus,
+    saveError,
+    save: manualSave,
   };
 }

@@ -4,11 +4,27 @@ import { useState } from 'react';
 import type { Annotation, AnnotationSet, ComponentRole } from '@typefigma/annotations';
 import { COMPONENT_ROLES, isComponentRole } from '@typefigma/annotations';
 
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+
 interface RolePickerProps {
   selectedAnnotation: Annotation | null;
   annotationSet: AnnotationSet;
   onRoleChange: (nodeId: string, newRole: ComponentRole, notes?: string) => void;
   onExport: () => void;
+  onSave?: () => void;
+  saveStatus?: SaveStatus;
+  saveError?: string | null;
+}
+
+function SaveIndicator({ status, error }: { status: SaveStatus; error?: string | null }) {
+  if (status === 'idle') return null;
+  return (
+    <div className={`text-xs px-3 py-1 rounded ${status === 'saving' ? 'text-blue-400 bg-blue-400/10' : status === 'saved' ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'}`}>
+      {status === 'saving' && 'Saving...'}
+      {status === 'saved' && 'Saved'}
+      {status === 'error' && `Save failed: ${error || 'Unknown error'}`}
+    </div>
+  );
 }
 
 export default function RolePicker({
@@ -16,6 +32,9 @@ export default function RolePicker({
   annotationSet,
   onRoleChange,
   onExport,
+  onSave,
+  saveStatus,
+  saveError,
 }: RolePickerProps) {
   const [notes, setNotes] = useState('');
 
@@ -57,6 +76,7 @@ export default function RolePicker({
           {' | '}Confidence:{' '}
           {Math.round(selectedAnnotation.confidence * 100)}%
         </p>
+        {saveStatus && <SaveIndicator status={saveStatus} error={saveError} />}
       </div>
 
       <div className="role-picker__role">
@@ -101,6 +121,15 @@ export default function RolePicker({
         >
           Copy JSON
         </button>
+        {onSave && (
+          <button
+            onClick={onSave}
+            disabled={saveStatus === 'saving'}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded text-sm transition"
+          >
+            Save
+          </button>
+        )}
       </div>
     </div>
   );
