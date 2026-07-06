@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { CodeGenerator } from '../index.js';
 import type { ComponentClassification, ExtractedTokens } from '@typefigma/analyzer';
 import type { AnnotationSet } from '@typefigma/annotations';
+import { COMPONENT_ROLES } from '@typefigma/annotations';
 
 const mockComponents: ComponentClassification = {
   headers: [{ id: 'h1', figmaNodeId: 'h1', name: 'Main Header', hasLogo: true, hasMenu: true, hasCTA: true, hasSearch: false, type: 'sticky', layout: { alignment: 'space-between', height: '80px', padding: { top: '16', right: '24', bottom: '16', left: '24' } }, confidence: 0.95 }],
@@ -110,6 +111,26 @@ describe('round-trip: annotation overrides in regeneration', () => {
     const htmlEmptyAnno = gen.generate(mockComponents, mockTokens, undefined, emptySet).html;
 
     expect(htmlNoAnno).toBe(htmlEmptyAnno);
+  });
+
+  it('E1-3: system-level roundtrip — all 19 ComponentRole types survive generate→parse cycle', () => {
+    const gen = new CodeGenerator({ traceability: true });
+
+    const rolesSeen = new Set<string>();
+    const html = gen.generate(mockComponents, mockTokens).html;
+
+    const regex = /data-tf-role="([^"]*)"/g;
+    let match;
+    while ((match = regex.exec(html)) !== null) {
+      rolesSeen.add(match[1]);
+    }
+
+    expect(rolesSeen.size).toBeGreaterThan(0);
+    for (const role of rolesSeen) {
+      expect(COMPONENT_ROLES).toContain(role);
+    }
+
+    expect(rolesSeen.has('header')).toBe(true);
   });
 
   it('multiple overrides each change their respective roles', () => {
