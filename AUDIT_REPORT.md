@@ -300,3 +300,170 @@ cad3ed5 docs: add Phase B report to AUDIT_REPORT.md
 - [x] Zero `any` / `as any` in new/modified code
 - [x] One local commit per task, conventional messages, no push
 - [x] A combined Phase A+Phase B report appended to AUDIT_REPORT.md
+
+## Phase C — Live Editor: Selection + RolePicker (web-ui)
+
+### Protocol placement decision
+
+**New package `@typefigma/editor-protocol`** under `packages/core/editor-protocol/`.
+
+**Justification** (same rigor as Phase B annotation-bridge decision):
+
+1. **Separation of concerns** — The protocol (typed postMessage messages + guards) is a standalone concern with *zero* dependencies. It does not conceptually belong in any existing package: it is not an annotation, not a bridge concern, and not specific to the web-ui React components.
+2. **Dependency graph hygiene** — Placing protocol types/guards in `@typefigma/annotations` would create an unnecessary coupling: the editor must import annotations for `AnnotationSet` etc., but the protocol does not need annotations. Keeping it separate prevents cycles and keeps `annotations` pure.
+3. **Reusability** — The protocol types can be consumed by the web-ui (React), a potential CLI-based preview, or future editor clients without pulling in React or annotation dependencies.
+4. **No runtime deps** — `@typefigma/editor-protocol` has zero runtime dependencies (only `typescript`, `vitest`, and `jsdom` as dev dependencies).
+
+### Full protocol message table
+
+| Direction | Type | Payload | Guard name | protocolVersion |
+|---|---|---|---|---|
+| iframe → parent | `TF_READY` | (none) | `isTfReady` | 1 |
+| iframe → parent | `TF_SELECT` | `{ nodeId: string; role: string; name?: string; rect: TfRect }` | `isTfSelect` | 1 |
+| iframe → parent | `TF_HOVER` | `{ nodeId: string \| null }` | `isTfHover` | 1 |
+| parent → iframe | `TF_HIGHLIGHT` | `{ nodeId: string \| null }` | `isTfHighlight` | 1 |
+| parent → iframe | `TF_SET_ROLE_BADGE` | `{ nodeId: string; role: string }` | `isTfSetRoleBadge` | 1 |
+
+`TfRect` shape: `{ x, y, width, height, top, right, bottom, left }` (all `number`).  
+Helper guard: `isTfRect`.  
+Combined guard: `isEditorInboundMessage` (accepts TF_HIGHLIGHT or TF_SET_ROLE_BADGE).
+
+### Raw vitest output (per-file lines)
+
+```
+=== packages/core/analyzer ===
+  ✓ src/__tests__/layout-engine.test.ts (8 tests)
+  ✓ src/__tests__/token-extractor.test.ts (5 tests)
+  ✓ src/__tests__/component-detector.test.ts (3 tests)
+  Tests  16 passed
+
+=== packages/core/annotations ===
+  ✓ src/__tests__/annotations.test.ts (49 tests)
+  Tests  49 passed
+
+=== packages/core/annotation-bridge ===
+  ✓ src/__tests__/bridge.test.ts (11 tests)
+  ✓ src/__tests__/roundtrip.test.ts (3 tests)
+  Tests  14 passed
+
+=== packages/core/code-generator ===
+  ✓ src/__tests__/css-generator.test.ts (8 tests)
+  ✓ src/__tests__/dtcg-generator.test.ts (20 tests)
+  ✓ src/__tests__/tailwind-generator.test.ts (7 tests)
+  ✓ src/__tests__/wp-block-generator.test.ts (11 tests)
+  ✓ src/__tests__/html-generator.test.ts (14 tests)
+  ✓ src/__tests__/theme-json-generator.test.ts (10 tests)
+  ✓ src/__tests__/code-generator.test.ts (9 tests)
+  Tests  79 passed
+
+=== packages/core/editor-protocol ===
+  ✓ src/__tests__/protocol.test.ts (37 tests)
+  ✓ src/__tests__/selection-script.test.ts (10 tests)
+  Tests  47 passed
+
+=== packages/core/elementor-mapper ===
+  ✓ src/__tests__/mapper-hierarchical.test.ts (23 tests)
+  ✓ src/__tests__/templates.test.ts (317 tests)
+  Tests  340 passed
+
+=== packages/core/figma-client ===
+  ✓ tests/transitions-zindex.test.ts (5 tests)
+  ✓ src/__tests__/client.test.ts (57 tests)
+  Tests  62 passed
+
+=== packages/core/theme-builder ===
+  ✓ src/__tests__/config-panel.test.ts (15 tests)
+  ✓ src/__tests__/wordpress-files.test.ts (17 tests)
+  ✓ src/__tests__/font-manager.test.ts (34 tests)
+  Tests  66 passed
+
+=== packages/core/validator ===
+  ✓ src/__tests__/validator.test.ts (12 tests)
+  Tests  12 passed
+
+=== packages/core/woocommerce-generator ===
+  ✓ src/__tests__/woocommerce-generator.test.ts (5 tests)
+  Tests  5 passed
+
+=== packages/cli ===
+  ✓ src/__tests__/cli.test.ts (4 tests)
+  Tests  4 passed
+
+=== apps/web-ui ===
+  ✓ src/__tests__/useEditorState.test.ts (11 tests)
+  ✓ src/__tests__/EditorCanvas.test.tsx (7 tests)
+  ✓ src/__tests__/RolePicker.test.tsx (7 tests)
+  Tests  25 passed
+```
+
+**Grand total: 16 + 49 + 14 + 79 + 47 + 340 + 62 + 66 + 12 + 5 + 4 + 25 = 719 passed, 0 failed.**
+
+Pre-Phase C: 647. New tests: +72 (47 editor-protocol + 25 web-ui).
+
+### Typecheck raw output
+
+```
+=== packages/core/analyzer === OK
+=== packages/core/annotations === OK
+=== packages/core/annotation-bridge === OK
+=== packages/core/code-generator === OK
+=== packages/core/editor-protocol === OK
+=== packages/core/elementor-mapper === OK
+=== packages/core/figma-client === OK
+=== packages/core/theme-builder === OK
+=== packages/core/validator === OK
+=== packages/core/woocommerce-generator === OK
+=== packages/cli === OK
+=== packages/api === OK
+=== apps/web-ui === (tsc --noEmit) exit code 0
+```
+
+**All 13 workspaces typecheck with 0 errors.**
+
+### Commit list
+
+```
+0a3eb4f feat(editor-protocol): create @typefigma/editor-protocol package
+3af7cec feat(web-ui): EditorCanvas, RolePicker, useEditorState, vitest infra
+aa76da9 fix: typecheck error in useEditorState.test.ts default case
+```
+
+### git log --oneline -5
+
+```
+aa76da9 fix: typecheck error in useEditorState.test.ts default case
+3af7cec feat(web-ui): EditorCanvas, RolePicker, useEditorState, vitest infra
+0a3eb4f feat(editor-protocol): create @typefigma/editor-protocol package
+191d7db docs(audit): append Phase A and Phase B results
+...
+```
+
+### Verification checklist
+
+- [x] Protocol placement decision documented with justification
+- [x] Full protocol message table (direction, payload, guard name)
+- [x] Raw vitest output (per-file lines per workspace)
+- [x] Grand total: 719 passed (647 pre-Phase C; +72 new)
+- [x] Typecheck: 13 workspaces, 0 errors
+- [x] 3 local commits, conventional messages, no push
+- [x] Phase C section appended to AUDIT_REPORT.md (grep proof below)
+
+```
+$ grep -n "Phase C" AUDIT_REPORT.md
+304:## Phase C — Live Editor: Selection + RolePicker (web-ui)
+
+$ git show --stat HEAD
+commit aa76da9f8def52cfb3653981f422e48f6f0c28d2
+Author: ahmadspy ...
+Date:   Mon Jul 6 13:24:47 2026 +0330
+    fix: typecheck error in useEditorState.test.ts default case
+ apps/web-ui/src/__tests__/useEditorState.test.ts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+$ git log --oneline --since="2026-07-06" --format="%h %s"
+aa76da9 fix: typecheck error in useEditorState.test.ts default case
+3af7cec feat(web-ui): EditorCanvas, RolePicker, useEditorState, vitest infra
+0a3eb4f feat(editor-protocol): create @typefigma/editor-protocol package
+191d7db docs(audit): append Phase A and Phase B results
+```
+
