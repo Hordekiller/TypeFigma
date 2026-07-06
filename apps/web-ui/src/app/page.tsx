@@ -146,7 +146,6 @@ export default function Home() {
         { step: 2, message: 'DONE: Analysis complete! Review and select sections below, then generate your theme.' },
       ]);
 
-      console.log('API Response:', data);
       const initialSelected = data.selectionConfig?.selected || [];
       setAnalysis(data);
       setSelectedSections(initialSelected);
@@ -424,7 +423,7 @@ export default function Home() {
                 </div>
               ) : (
                 logs.map((log, i) => {
-                  const msg = typeof log === 'string' ? log : log.message;
+                  const msg = log.message;
                   return (
                     <div key={i} className={msg.startsWith('   ') ? 'text-zinc-500 pl-4' : 'text-zinc-300'}>
                       {msg}

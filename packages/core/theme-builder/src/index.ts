@@ -7,15 +7,6 @@ import type { ElementorTemplate, GlobalSettings } from '@typefigma/elementor-map
 import type { GeneratedCode } from '@typefigma/code-generator';
 import type { ThemeConfig } from './types.js';
 
-// Map ThemeConfig to ThemeOptions for backward compatibility
-function mapToThemeOptions(config: ThemeConfig): ThemeOptions {
-  return {
-    themeName: config.name,
-    themeSlug: config.textDomain,
-    projectType: 'website', // Default fallback
-  };
-}
-
 export class ThemeBuilder {
   private options: ThemeConfig;
   private analysis: FigmaAnalysis;
@@ -95,27 +86,28 @@ add_action('wp_enqueue_scripts', function() {
     return files;
   }
 
-  private generateWooCommerceTemplates(): ThemeFile[] {
+  private async generateWooCommerceTemplates(): Promise<ThemeFile[]> {
     if (!this.options.includeWooCommerce) {
       return [];
     }
 
-    const { WooCommerceGenerator } = require('@typefigma/woocommerce-generator');
+    // Dynamic import avoids circular dependency (theme-builder ↔ woocommerce-generator)
+    const { WooCommerceGenerator } = await import('@typefigma/woocommerce-generator');
     const generator = new WooCommerceGenerator(this.options, this.options.woocommerceFeatures);
     const templates = generator.generateTemplates();
 
     return Object.entries(templates).map(([path, content]) => ({
       path: `woocommerce/${path}`,
-      content
+      content,
     }));
   }
 
-  build(
+  async build(
     elementorTemplates: ElementorTemplate[],
     globalSettings: GlobalSettings,
     codeGen: GeneratedCode,
     fontConfig?: ThemeFontConfig,
-  ): ThemeFile[] {
+  ): Promise<ThemeFile[]> {
     const builder = new WordPressFileBuilder(this.getThemeOptions(), this.analysis);
 
     let fontEntries: FontFamilyEntry[] | undefined;
@@ -190,7 +182,7 @@ add_action('wp_enqueue_scripts', function() {
 
     // Add WooCommerce templates if enabled
     if (this.options.includeWooCommerce) {
-      const woocommerceFiles = this.generateWooCommerceTemplates();
+      const woocommerceFiles = await this.generateWooCommerceTemplates();
       files.push(...woocommerceFiles);
     }
 
@@ -208,6 +200,7 @@ add_action('wp_enqueue_scripts', function() {
 export { WordPressFileBuilder } from './wordpress-files.js';
 export { DocGenerator } from './doc-generator.js';
 export type { ThemeFile, ThemeOptions, ThemeFontConfig, FontOption } from './wordpress-files.js';
+export type { ThemeConfig } from './types.js';
 
 export function slugify(name: string): string {
   return name

@@ -247,51 +247,57 @@ function extractStyles(): ExtractedStyle[] {
 
 // ─── Auto-Layout Node Extraction ─────────────────────
 
+function hasChildren(node: SceneNode): node is SceneNode & { children: SceneNode[] } {
+  return 'children' in node;
+}
+
 function extractNode(node: SceneNode, includeHidden: boolean, depth = 0): AutoLayoutNode | null {
   if (depth > 50) return null;
   if (!includeHidden && !node.visible) return null;
 
   const children: AutoLayoutNode[] = [];
-  if ('children' in node) {
-    for (const child of (node as unknown as { children: SceneNode[] }).children) {
+  if (hasChildren(node)) {
+    for (const child of node.children) {
       const extracted = extractNode(child, includeHidden, depth + 1);
       if (extracted) children.push(extracted);
     }
   }
 
-  const fills: Paint[] = 'fills' in node ? (node as unknown as { fills: Paint[] }).fills ?? [] : [];
-  const strokes: Paint[] = 'strokes' in node ? (node as unknown as { strokes: Paint[] }).strokes ?? [] : [];
-  const effects: Effect[] = 'effects' in node ? (node as unknown as { effects: Effect[] }).effects ?? [] : [];
+  const fills: Paint[] = 'fills' in node ? (node as SceneNode & { fills: Paint[] }).fills ?? [] : [];
+  const strokes: Paint[] = 'strokes' in node ? (node as SceneNode & { strokes: Paint[] }).strokes ?? [] : [];
+  const effects: Effect[] = 'effects' in node ? (node as SceneNode & { effects: Effect[] }).effects ?? [] : [];
 
-  const layoutMode = 'layoutMode' in node ? (node as unknown as { layoutMode: 'NONE' | 'HORIZONTAL' | 'VERTICAL' }).layoutMode : 'NONE';
+  const layoutMode = 'layoutMode' in node
+    ? (node as SceneNode & { layoutMode: 'NONE' | 'HORIZONTAL' | 'VERTICAL' }).layoutMode ?? 'NONE'
+    : 'NONE';
 
   return {
     id: node.id,
     name: node.name,
     type: node.type,
     visible: node.visible,
-    layoutMode: layoutMode ?? 'NONE',
+    layoutMode,
     primaryAxisAlignItems: 'primaryAxisAlignItems' in node
-      ? (node as unknown as { primaryAxisAlignItems: 'MIN' | 'MAX' | 'CENTER' | 'SPACE_BETWEEN' }).primaryAxisAlignItems ?? 'MIN'
+      ? (node as SceneNode & { primaryAxisAlignItems: 'MIN' | 'MAX' | 'CENTER' | 'SPACE_BETWEEN' }).primaryAxisAlignItems ?? 'MIN'
       : 'MIN',
     counterAxisAlignItems: 'counterAxisAlignItems' in node
-      ? (node as unknown as { counterAxisAlignItems: 'MIN' | 'MAX' | 'CENTER' | 'BASELINE' }).counterAxisAlignItems ?? 'MIN'
+      ? (node as SceneNode & { counterAxisAlignItems: 'MIN' | 'MAX' | 'CENTER' | 'BASELINE' }).counterAxisAlignItems ?? 'MIN'
       : 'MIN',
     padding: {
-      top: 'paddingTop' in node ? (node as unknown as { paddingTop: number }).paddingTop ?? 0 : 0,
-      right: 'paddingRight' in node ? (node as unknown as { paddingRight: number }).paddingRight ?? 0 : 0,
-      bottom: 'paddingBottom' in node ? (node as unknown as { paddingBottom: number }).paddingBottom ?? 0 : 0,
-      left: 'paddingLeft' in node ? (node as unknown as { paddingLeft: number }).paddingLeft ?? 0 : 0,
+      top: 'paddingTop' in node ? (node as SceneNode & { paddingTop: number }).paddingTop ?? 0 : 0,
+      right: 'paddingRight' in node ? (node as SceneNode & { paddingRight: number }).paddingRight ?? 0 : 0,
+      bottom: 'paddingBottom' in node ? (node as SceneNode & { paddingBottom: number }).paddingBottom ?? 0 : 0,
+      left: 'paddingLeft' in node ? (node as SceneNode & { paddingLeft: number }).paddingLeft ?? 0 : 0,
     },
-    itemSpacing: 'itemSpacing' in node ? (node as unknown as { itemSpacing: number }).itemSpacing ?? 0 : 0,
-    layoutGrow: 'layoutGrow' in node ? (node as unknown as { layoutGrow: number }).layoutGrow ?? 0 : 0,
+    itemSpacing: 'itemSpacing' in node ? (node as SceneNode & { itemSpacing: number }).itemSpacing ?? 0 : 0,
+    layoutGrow: 'layoutGrow' in node ? (node as SceneNode & { layoutGrow: number }).layoutGrow ?? 0 : 0,
     layoutAlign: 'layoutAlign' in node
-      ? (node as unknown as { layoutAlign: 'INHERIT' | 'STRETCH' }).layoutAlign ?? 'INHERIT'
+      ? (node as SceneNode & { layoutAlign: 'INHERIT' | 'STRETCH' }).layoutAlign ?? 'INHERIT'
       : 'INHERIT',
     fills: fills.filter(f => f.visible !== false).map(paintToString),
     strokes: strokes.filter(s => s.visible !== false).map(paintToString),
     effects: effects.filter(e => e.visible !== false).map(e => e.type),
-    cornerRadius: 'cornerRadius' in node ? (node as unknown as { cornerRadius: number }).cornerRadius ?? 0 : 0,
+    cornerRadius: 'cornerRadius' in node ? (node as SceneNode & { cornerRadius: number }).cornerRadius ?? 0 : 0,
     width: node.width,
     height: node.height,
     children: children.length > 0 ? children : [],

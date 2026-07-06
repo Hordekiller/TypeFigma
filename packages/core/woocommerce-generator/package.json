@@ -2,20 +2,25 @@
   "name": "@typefigma/woocommerce-generator",
   "version": "1.0.0",
   "description": "Generates WooCommerce templates for WordPress themes",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": ["woocommerce", "wordpress", "theme", "generator"],
   "author": "TypeFigma",
   "license": "MIT",
   "dependencies": {
-    "@typefigma/theme-builder": "workspace:*",
-    "@typefigma/analyzer": "workspace:*"
+    "@typefigma/theme-builder": "*",
+    "@typefigma/analyzer": "*"
   },
   "devDependencies": {
-    "typescript": "^5.0.0"
+    "typescript": "^5.5.0",
+    "vitest": "4.1.9"
   }
 }

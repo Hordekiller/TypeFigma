@@ -235,7 +235,7 @@ export class DocGenerator {
   }
 
   generateAgentsUpdate(): string {
-    const { themeSlug, projectType, plugins } = this.config;
+    const { themeSlug, projectType } = this.config;
     const isEcom = projectType === 'ecommerce';
 
     return `## Recent Updates (${new Date().toISOString().split('T')[0]})
@@ -263,7 +263,7 @@ This theme was generated with:
   }
 
   private countComponentTypes(): number {
-    return Object.keys(this.config.components).filter(k => Array.isArray(this.config.components[k]) && this.config.components[k].length > 0).length;
+    return Object.values(this.config.components).filter(arr => Array.isArray(arr) && arr.length > 0).length;
   }
 
   private pluginName(slug: string): string {

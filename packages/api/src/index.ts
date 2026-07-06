@@ -173,11 +173,11 @@ app.post('/api/generate', asyncHandler(async (req, res) => {
   }
 
   const themeBuilder = new ThemeBuilder(
-    { themeName, themeSlug, projectType: pType.type },
+    { name: themeName, textDomain: themeSlug, description: '', version: '1.0.0', author: '' },
     analysis,
   );
   const globalSettings = elementorGen.generate(analysis.components).globalSettings;
-  const themeFiles = themeBuilder.build(
+  const themeFiles = await themeBuilder.build(
     elementorOutput,
     globalSettings,
     generatedCode,

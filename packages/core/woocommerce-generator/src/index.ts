@@ -1,7 +1,7 @@
 // WooCommerce Generator: Generates WooCommerce templates for WordPress themes.
 
 import { ThemeConfig } from '@typefigma/theme-builder';
-import { ComponentClassification } from '@typefigma/analyzer';
+
 
 export interface WooCommerceConfig {
   includeVariations?: boolean;
@@ -10,16 +10,15 @@ export interface WooCommerceConfig {
 }
 
 export class WooCommerceGenerator {
-  private config: ThemeConfig;
   private woocommerceConfig: WooCommerceConfig;
 
-  constructor(config: ThemeConfig, woocommerceConfig: WooCommerceConfig = {}) {
-    this.config = config;
+  constructor(config: ThemeConfig, woocommerceConfig?: WooCommerceConfig) {
+    const wcFeatures = woocommerceConfig ?? config.woocommerceFeatures;
     this.woocommerceConfig = {
       includeVariations: true,
       includeGroupedProducts: true,
       includeMiniCart: true,
-      ...woocommerceConfig
+      ...wcFeatures
     };
   }
 
@@ -43,6 +42,14 @@ export class WooCommerceGenerator {
    * Generates single-product.php template.
    */
   private generateSingleProductTemplate(): string {
+    const variationsBlock = this.woocommerceConfig.includeVariations
+      ? `    if ($product->is_type('variable')) {
+      woocommerce_variable_add_to_cart();
+    } else {
+      woocommerce_template_single_add_to_cart();
+    }`
+      : `    woocommerce_template_single_add_to_cart();`;
+
     return `<?php
 /**
  * The template for displaying product content in the single-product.php template
@@ -72,13 +79,7 @@ if (post_password_required()) {
     woocommerce_template_single_rating();
     woocommerce_template_single_price();
     woocommerce_template_single_excerpt();
-    
-    if ($this->woocommerceConfig.includeVariations && $product->is_type('variable')) {
-      woocommerce_variable_add_to_cart();
-    } else {
-      woocommerce_template_single_add_to_cart();
-    }
-    
+    ${variationsBlock}
     woocommerce_template_single_meta();
     woocommerce_template_single_sharing();
     ?>
@@ -364,6 +365,12 @@ get_header('shop');
    * Generates header.php with mini cart support.
    */
   private generateHeaderTemplate(): string {
+    const miniCartBlock = this.woocommerceConfig.includeMiniCart
+      ? `    <div class="mini-cart">
+        <?php woocommerce_mini_cart(); ?>
+      </div>`
+      : '';
+
     return `<?php
 /**
  * The header for our theme
@@ -392,11 +399,7 @@ get_header('shop');
       <?php wp_nav_menu(array('theme_location' => 'primary')); ?>
     </nav>
 
-    <?php if ($this->woocommerceConfig.includeMiniCart) : ?>
-      <div class="mini-cart">
-        <?php woocommerce_mini_cart(); ?>
-      </div>
-    <?php endif; ?>
+    ${miniCartBlock}
   </header>
 
   <main id="main" class="site-main">`;

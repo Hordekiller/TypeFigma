@@ -88,7 +88,6 @@ program
 
       const analyzer = new Analyzer(token);
       const analysis = await analyzer.analyze(figmaUrl);
-      const pType = analysis.projectType;
 
       // Step 4: Code Generation
       let sp = spinner('Step 4: Generating HTML/CSS...');
@@ -110,10 +109,10 @@ program
       // Step 6-7: Theme Building
       sp = spinner('Step 6-7: Building WordPress theme structure...');
       const themeBuilder = new ThemeBuilder(
-        { themeName, themeSlug, projectType: pType.type },
+        { name: themeName, textDomain: themeSlug, description: '', version: '1.0.0', author: '' },
         analysis,
       );
-      const themeFiles = themeBuilder.build(
+      const themeFiles = await themeBuilder.build(
         elementorOutput.templates,
         elementorOutput.globalSettings,
         generatedCode,
@@ -381,11 +380,10 @@ program
     console.log('\n  📖 Generating documentation...\n');
 
     const sp = spinner('Analyzing Figma design...');
-    const analyzer = new Analyzer();
+    const analyzer = new Analyzer(token);
     let analysis;
     try {
-      const fileKey = analyzer.extractFileKey(options.url);
-      analysis = await analyzer.analyze(fileKey, token);
+      analysis = await analyzer.analyze(options.url);
     } catch (err) {
       sp.stop(`Error: ${(err as Error).message}`);
       process.exit(1);

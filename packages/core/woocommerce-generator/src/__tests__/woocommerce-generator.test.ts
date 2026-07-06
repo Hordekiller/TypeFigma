@@ -1,4 +1,5 @@
-import { WooCommerceGenerator } from '../index';
+import { describe, it, expect } from 'vitest';
+import { WooCommerceGenerator } from '../index.js';
 import { ThemeConfig } from '@typefigma/theme-builder';
 
 describe('WooCommerceGenerator', () => {
@@ -64,7 +65,7 @@ describe('WooCommerceGenerator', () => {
       // Check for PHP opening tag
       expect(template).toContain('<?php');
       // Check for basic WooCommerce functions
-      expect(template).toMatch(/woocommerce_|WC_|do_action\(['"]woocommerce_)/);
+      expect(template).toMatch(/woocommerce_/);
     });
   });
 });
