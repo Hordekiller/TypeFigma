@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { HtmlGenerator } from '../html-generator.js';
-import type { ComponentClassification, ExtractedTokens, NavigationComponent, TestimonialComponent } from '@typefigma/analyzer';
+import type { ComponentClassification, ExtractedTokens, NavigationComponent, TestimonialComponent, HeaderComponent } from '@typefigma/analyzer';
 
 const mockComponents: ComponentClassification = {
   headers: [{ id: 'h1', figmaNodeId: 'h1', name: 'Header', confidence: 0.95, type: 'sticky', hasLogo: true, hasMenu: true, hasSearch: false, hasCTA: true, layout: { alignment: 'space-between', height: '80px', padding: { top: '1rem', right: '2rem', bottom: '1rem', left: '2rem' } } }],
@@ -54,7 +54,6 @@ const mockTokens: ExtractedTokens = {
 
 describe('HtmlGenerator', () => {
   const gen = new HtmlGenerator();
-  const genNoTrace = new HtmlGenerator({ traceability: false });
 
   it('should include data-tf-node-id on header root element', () => {
     const html = gen.generateHeader(mockComponents.headers[0], mockTokens);
@@ -79,7 +78,6 @@ describe('HtmlGenerator', () => {
 
   it('should include data-tf-node-id on navigation root element', () => {
     const navComp: NavigationComponent = { id: 'n1', figmaNodeId: 'n1', type: 'horizontal', items: 5, hasDropdown: false };
-    const navCompList: ComponentClassification = { ...mockComponents, navigation: [navComp] };
     const html = gen.generateNavigation(navComp, mockTokens);
     expect(html).toContain('data-tf-node-id="n1"');
     expect(html).toContain('data-tf-role="nav-menu"');
