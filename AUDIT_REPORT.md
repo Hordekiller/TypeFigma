@@ -620,4 +620,98 @@ EXIT_CODE=0
 
 **Commit:** fbf5a2b docs(audit): restore Phase A-C sections and append Phase D
 
+## Phase E — Integration & End-to-End Validation Summary
+
+### E.1 Scope
+
+| # | Task | Package(s) | Files | Tests |
+|---|------|------------|-------|-------|
+| E1-1 | E2E harness: drive 5 protocol messages through real code-generator | `editor-protocol`, `code-generator` | `e2e/harness.test.ts` | 8 |
+| E1-2 | Golden-file tests: 3 component trees → fixtures | `code-generator` | `e2e/golden-files.test.ts`, 6 `.html` fixtures | 3 |
+| E1-3 | System-level roundtrip: generate → parse → ComponentRole map intact | `code-generator` | `roundtrip.test.ts` (extended) | +1 |
+| E1-4 | Negative-path: malformed payloads + protocolVersion mismatch | `editor-protocol` | `e2e/negative-path.test.ts` | 37 |
+| E1-5 | web-ui smoke: mount editor, send edit cycle | `web-ui` | `e2e-smoke.test.tsx` | 5 |
+
+### E.2 Files Changed
+
+```
+$ git show --stat HEAD
+ 12 files changed, 1894 insertions(+)
+ apps/web-ui/src/__tests__/e2e-smoke.test.tsx                |  95 +++++
+ packages/core/code-generator/src/__fixtures__/*.html         |   6 files
+ packages/core/code-generator/src/__tests__/e2e/fixtures.ts  | 283 ++++++++
+ packages/core/code-generator/src/__tests__/e2e/harness.test.ts  |  81 +++
+ packages/core/code-generator/src/__tests__/e2e/golden-files.test.ts | 64 +++
+ packages/core/code-generator/src/__tests__/e2e/negative-path.test.ts | 97 ++++
+ packages/core/code-generator/src/__tests__/roundtrip.test.ts  | +17
+```
+
+No production code changed — all new files are test code or fixture html.
+
+### E.3 Test Counts (per package)
+
+| Package | Before (Phase D) | After (Phase E) | Delta |
+|---------|------------------|-----------------|-------|
+| analyzer | 16 | 16 | 0 |
+| annotation-bridge | 14 | 14 | 0 |
+| annotations | 49 | 49 | 0 |
+| code-generator | 82 | 131 | **+49** |
+| editor-protocol | 47 | 47 | 0 |
+| elementor-mapper | 340 | 340 | 0 |
+| figma-client | 62 | 62 | 0 |
+| theme-builder | 66 | 66 | 0 |
+| validator | 12 | 12 | 0 |
+| woocommerce-generator | 5 | 5 | 0 |
+| cli | 4 | 4 | 0 |
+| api | 9 | 9 | 0 |
+| web-ui | 30 | 35 | **+5** |
+| **Total** | **736** | **790** | **+54** |
+
+New tests added in Phase E:
+- 37 negative-path tests (all 5 protocol message guards × 5–7 malformed variants each)
+- 8 harness tests (traceability, script injection, guard validation)
+- 3 golden-file tests (deterministic HTML — diff-clean on re-run)
+- 1 roundtrip test (E1-3: system-level ComponentRole survivability)
+- 5 web-ui smoke tests (iframe render, onSelect/onReady/onHover callbacks, ref API)
+
+### E.4 Typecheck
+
+```
+$ npm run typecheck 2>&1; echo "EXIT_CODE=$?"
+... (13 workspaces, all tsc --noEmit) ...
+EXIT_CODE=0
+```
+
+### E.5 Verification Proofs
+
+```
+$ grep -n "^## Phase" AUDIT_REPORT.md
+1:## Phase A — Annotations Package Results
+134:## Phase B — Traceability & Auto-Annotation Results
+304:## Phase C — Live Editor: Selection + RolePicker (web-ui)
+470:## Phase D — Annotation Persistence + Regeneration Loop Summary
+623:## Phase E — Integration & End-to-End Validation Summary
+```
+
+```
+$ git log --oneline -3
+1eeb06e test(e2e): Phase E — E2E harness, golden files, roundtrip, negative-path, web-ui smoke
+95d215b docs: restore Phase A-C, append Phase D audit report
+fbf5a2b docs(audit): restore Phase A-C sections and append Phase D
+```
+
+### E.6 Skills Report
+
+| Skill | Status |
+|-------|--------|
+| wp-rest-api | SKILL AVAILABLE — loaded via `skill` tool |
+| wp-block-development | SKILL AVAILABLE — loaded via `skill` tool |
+| figma-use | SKILL UNAVAILABLE — installed but `skill` tool cannot load mid-session |
+| figma-generate-design | SKILL UNAVAILABLE — same session-limitation |
+| figma-generate-library | SKILL UNAVAILABLE — same session-limitation |
+| figma-implement-design | SKILL UNAVAILABLE — install timed out |
+| Anthropic webapp-testing | SKILL UNAVAILABLE — no install executed |
+| Anthropic frontend-design | SKILL UNAVAILABLE — no install executed |
+
+
 
