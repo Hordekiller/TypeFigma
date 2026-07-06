@@ -3,6 +3,8 @@
   "references": [
     { "path": "packages/core/figma-client" },
     { "path": "packages/core/analyzer" },
+    { "path": "packages/core/annotations" },
+    { "path": "packages/core/annotation-bridge" },
     { "path": "packages/core/code-generator" },
     { "path": "packages/core/elementor-mapper" },
     { "path": "packages/core/theme-builder" },
