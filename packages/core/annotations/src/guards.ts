@@ -1,6 +1,6 @@
 import type { ComponentRole, Annotation, AnnotationSet } from './types.js';
 
-const COMPONENT_ROLES: readonly string[] = [
+export const COMPONENT_ROLES: readonly string[] = [
   'header', 'footer', 'nav-menu', 'hero', 'cta',
   'button', 'login-form', 'search-form',
   'slider', 'carousel',

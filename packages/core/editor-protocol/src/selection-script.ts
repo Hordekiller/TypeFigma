@@ -10,10 +10,6 @@ export function findComponentAncestor(el: Element | null): Element | null {
   return null;
 }
 
-function escapeAttr(s: string): string {
-  return s.replace(/["\\]/g, '\\$&');
-}
-
 /**
  * Build the self-contained selection-script that is injected into the
  * preview iframe's srcdoc HTML.
