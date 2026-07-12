@@ -23,11 +23,11 @@ export class Analyzer {
   async analyze(figmaUrl: string): Promise<FigmaAnalysis> {
     const fileKey = this.figmaClient.extractFileKey(figmaUrl);
 
-    const [file, styles, variablesResp] = await Promise.all([
-      this.figmaClient.getFile(fileKey, { depth: 4 }),
-      this.figmaClient.getStyles(fileKey).catch(() => undefined),
-      this.figmaClient.getVariables(fileKey).catch(() => undefined),
-    ]);
+    const file = await this.figmaClient.getFile(fileKey, { depth: 4 });
+    await new Promise(r => setTimeout(r, 100));
+    const styles = await this.figmaClient.getStyles(fileKey).catch(() => undefined);
+    await new Promise(r => setTimeout(r, 100));
+    const variablesResp = await this.figmaClient.getVariables(fileKey).catch(() => undefined);
 
     const detection = this.detector.detect(file);
     const designTokens = this.tokenExtractor.extract(file, styles);

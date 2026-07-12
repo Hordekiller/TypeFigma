@@ -97,23 +97,6 @@ export default function PipelineProgress({ steps, currentStep, logs, isRunning }
           Running step {currentStep}: {steps.find(s => s.num === currentStep)?.name}
         </div>
       )}
-
-      {logs.length > 0 && (
-        <div className="bg-zinc-900/50 rounded-lg border border-zinc-800 p-3 max-h-48 overflow-y-auto space-y-1">
-          <div className="text-xs font-medium text-zinc-500 mb-2">Logs ({logs.length})</div>
-          {logs.map((log, i) => (
-            <div key={i} className={`text-xs font-mono leading-relaxed ${
-              log.message.startsWith('ERROR') ? 'text-red-400' :
-              log.message.startsWith('WARN') ? 'text-amber-400' :
-              log.message.startsWith('DONE') ? 'text-green-400' :
-              'text-zinc-400'
-            }`}>
-              <span className="text-zinc-600 tabular-nums">[{log.step}]</span>{' '}
-              {log.message}
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

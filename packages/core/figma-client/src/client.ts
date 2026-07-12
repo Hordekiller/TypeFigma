@@ -413,9 +413,15 @@ export class FigmaClient {
         let errorBody: unknown;
         try { errorBody = JSON.parse(errorText); } catch { errorBody = errorText; }
 
+        let detailedMessage = response.statusText || errorText || 'Unknown error';
+        if (errorBody && typeof errorBody === 'object') {
+          const err = (errorBody as Record<string, unknown>).err || (errorBody as Record<string, unknown>).message;
+          if (typeof err === 'string') detailedMessage = `${response.statusText}: ${err}`;
+        }
+
         const figmaError = createFigmaError(
           response.status,
-          response.statusText || errorText || 'Unknown error',
+          detailedMessage,
           response.headers,
           errorBody,
         );

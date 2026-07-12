@@ -79,18 +79,13 @@ program
 
     try {
       // Step 1-3: Analyze
-      if (!quiet) {
-        const sp = spinner('Step 1-3: Fetching & Analyzing Figma design...');
-        const analyzerA = new Analyzer(token);
-        const analysisA = await analyzerA.analyze(figmaUrl);
-        sp.stop(`Analyzed: ${analysisA.projectType.type} (${Math.round(analysisA.projectType.confidence * 100)}%)`);
-      }
-
+      let sp = spinner('Step 1-3: Fetching & Analyzing Figma design...');
       const analyzer = new Analyzer(token);
       const analysis = await analyzer.analyze(figmaUrl);
+      sp.stop(`Analyzed: ${analysis.projectType.type} (${Math.round(analysis.projectType.confidence * 100)}%)`);
 
       // Step 4: Code Generation
-      let sp = spinner('Step 4: Generating HTML/CSS...');
+      sp = spinner('Step 4: Generating HTML/CSS...');
       const codeGen = new CodeGenerator({
         includeDtcg: options.dtcg,
         includeThemeJson: options.themeJson || options.blocks,

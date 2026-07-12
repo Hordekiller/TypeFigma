@@ -84,19 +84,24 @@ export class FigmaServerError extends FigmaApiError {
 }
 
 export function createFigmaError(status: number, statusText: string, headers?: Headers, body?: unknown): FigmaApiError {
+  const bodyDetail = typeof body === 'object' && body !== null
+    ? ((body as Record<string, unknown>).err || (body as Record<string, unknown>).message || JSON.stringify(body))
+    : undefined;
+  const msg = bodyDetail ? `${statusText}: ${bodyDetail}` : statusText;
+
   switch (status) {
     case 429:
-      return new FigmaRateLimitError(status, statusText, headers, body);
+      return new FigmaRateLimitError(status, msg, headers, body);
     case 404:
-      return new FigmaNotFoundError(statusText, headers, body);
+      return new FigmaNotFoundError(msg, headers, body);
     case 403:
-      return new FigmaForbiddenError(statusText, headers, body);
+      return new FigmaForbiddenError(msg, headers, body);
     case 400:
-      return new FigmaValidationError(statusText, headers, body);
+      return new FigmaValidationError(msg, headers, body);
     default:
       if (status >= 500) {
-        return new FigmaServerError(status, statusText, headers, body);
+        return new FigmaServerError(status, msg, headers, body);
       }
-      return new FigmaApiError(status, statusText, headers, body);
+      return new FigmaApiError(status, msg, headers, body);
   }
 }
